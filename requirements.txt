@@ -5,3 +5,6 @@ git+https://github.com/Rapptz/discord-ext-menus
 
 # Storage handling
 asyncpg
+
+# Other stuff
+matplotlib

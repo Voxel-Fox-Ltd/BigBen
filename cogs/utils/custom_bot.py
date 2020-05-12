@@ -46,6 +46,9 @@ class CustomBot(commands.AutoShardedBot):
         # Set up our default guild settings
         self.DEFAULT_GUILD_SETTINGS = {
             'prefix': self.config['default_prefix'],
+            'bong_channel_id': None,
+            'bong_role_id': None,
+            'bong_emoji': None,
         }
 
         # Aiohttp session

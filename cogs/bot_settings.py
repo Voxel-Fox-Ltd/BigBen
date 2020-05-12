@@ -26,6 +26,36 @@ class BotSettings(utils.Cog):
                 await db("UPDATE guild_settings SET prefix=$2 WHERE guild_id=$1", ctx.guild.id, new_prefix)
         await ctx.send(f"My prefix has been updated to `{new_prefix}`.")
 
+    @commands.command(cls=utils.Command)
+    @commands.has_permissions(manage_guild=True)
+    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    @commands.guild_only()
+    async def setup(self, ctx:utils.Context):
+        """Run the bot setup"""
+
+        menu = utils.SettingsMenu()
+        settings_mention = utils.SettingsMenuOption.get_guild_settings_mention
+        menu.bulk_add_options(
+            ctx,
+            {
+                'display': lambda c: "Set bong channel (currently {0})".format(settings_mention(c, 'bong_channel_id')),
+                'converter_args': [("Where do you want all the bong messages to go to?", "bong channel", commands.TextChannelConverter)],
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_channel_id'),
+            },
+            {
+                'display': lambda c: "Set 'first bong reaction' role (currently {0})".format(settings_mention(c, 'bong_role_id')),
+                'converter_args': [("Which role should the first reaction to the bong message get?", "bong channel", commands.RoleConverter)],
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_role_id'),
+            },
+            {
+                'display': lambda c: "Set bong reaction emoji (currently {0})".format(c.bot.guild_settings[c.guild.id]['bong_emoji']),
+                'converter_args': [("What should emoji should be added to each bong message?", "bong emoji", str)],
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_emoji'),
+            },
+        )
+        await menu.start(ctx)
+        await ctx.send("Done setting up!")
+
 
 def setup(bot:utils.Bot):
     x = BotSettings(bot)
