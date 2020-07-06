@@ -302,6 +302,40 @@ class BigBen(utils.Cog):
         menu = menus.MenuPages(source=source)
         await menu.start(ctx)
 
+    @commands.command(cls=utils.Command)
+    @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
+    @commands.guild_only()
+    async def bongdist(self, ctx:utils.Context, user:discord.Member=None):
+        """Gives you the bong leaderboard"""
+
+        user = user or ctx.author
+        async with self.bot.database() as db:
+            rows = await db("SELECT timestamp - message_timestamp AS reaction_time FROM bong_log WHERE user_id=$1 AND guild_id=$2", user.id, ctx.guild.id)
+        if not rows:
+            return await ctx.send(f"{user.mention} has reacted to the bong message yet on your server.")
+
+        # Build our output graph
+        fig = plt.figure()
+        ax = fig.subplots()
+        bplot = ax.boxplot([i['reaction_time'].total_seconds() for i in rows], patch_artist=True)
+        ax.axis([0, 2, 0, 10])
+
+        for i in bplot['boxes']:
+            i.set_facecolor('lightblue')
+
+        # Fix axies
+        # ax.axis('off')
+        ax.grid(True)
+
+        # Tighten border
+        fig.tight_layout()
+
+        # Output to user baybeeee
+        fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
+        with utils.Embed() as embed:
+            embed.set_image(url="attachment://activity.png")
+        await ctx.send(embed=embed, file=discord.File("activity.png"))
+
 
 def setup(bot:utils.Bot):
     x = BigBen(bot)
