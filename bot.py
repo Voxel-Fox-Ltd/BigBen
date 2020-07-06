@@ -85,10 +85,10 @@ if args.shardcount is not None and not (args.min is not None and args.max is not
 
 # Set up intents
 intents = discord.Intents(
-    guilds=False,  # guild/channel join/remove/update
-    members=False,  # member join/remove/update
+    guilds=True,  # guild/channel join/remove/update
+    members=True,  # member join/remove/update
     bans=False,  # member ban/unban
-    emojis=False,  # emoji update
+    emojis=True,  # emoji update
     integrations=False,  # integrations update
     webhooks=False,  # webhook update
     invites=False,  # invite create/delete
