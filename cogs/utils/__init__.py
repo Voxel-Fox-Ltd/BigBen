@@ -8,5 +8,6 @@ from cogs.utils.custom_command import CustomCommand as Command
 from cogs.utils.custom_command import CustomGroup as Group
 from cogs.utils.custom_context import CustomContext as Context
 from cogs.utils.database import DatabaseConnection
+from cogs.utils.redis import RedisConnection
 from cogs.utils.time_value import TimeValue
 from cogs.utils.settings_menu import SettingsMenu, SettingsMenuOption, SettingsMenuIterable

@@ -14,6 +14,7 @@ from discord.ext import commands
 
 from cogs.utils.custom_context import CustomContext
 from cogs.utils.database import DatabaseConnection
+from cogs.utils.redis import RedisConnection
 
 
 def get_prefix(bot, message:discord.Message):
