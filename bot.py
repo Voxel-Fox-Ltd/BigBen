@@ -83,6 +83,25 @@ if args.shardcount is not None and not (args.min is not None and args.max is not
     logger.critical("You set a shardcount but not min/max shards")
     exit(1)
 
+# Set up intents
+intents = discord.Intents(
+    guilds=False,  # guild/channel join/remove/update
+    members=False,  # member join/remove/update
+    bans=False,  # member ban/unban
+    emojis=False,  # emoji update
+    integrations=False,  # integrations update
+    webhooks=False,  # webhook update
+    invites=False,  # invite create/delete
+    voice_states=False,  # voice state update
+    presences=False,  # member/user update for games/activities
+    guild_messages=True,  # message create/update/delete
+    dm_messages=True,  # message create/update/delete
+    guild_reactions=True,  # reaction add/remove/clear
+    dm_reactions=True,  # reaction add/remove/clear
+    guild_typing=False,  # on typing
+    dm_typing=False,  # on typing
+)
+
 # Okay cool make the bot object
 bot = utils.Bot(
     config_file=args.config_file,
@@ -95,6 +114,7 @@ bot = utils.Bot(
     max_messages=100,  # The lowest amount that we can actually cache
     logger=logger.getChild('bot'),
     allowed_mentions=discord.AllowedMentions(everyone=False),
+    intents=intents,
 )
 
 # Set loglevel defaults
