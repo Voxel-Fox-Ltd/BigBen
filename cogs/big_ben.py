@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from discord.ext import tasks
 from discord.ext import menus
+from matplotlib import pyplot as plt
 
 from cogs import utils
 
@@ -24,6 +25,7 @@ class BigBen(utils.Cog):
         (14, 2): "Valentine's Bong",
         (1, 4): "Bing",
         (2, 7): "Midway Bong",
+        (6, 9): "Birthday Bong",
         (31, 10): "Halloween Bong",
         (25, 12): "Christmas Bong",
 
@@ -32,7 +34,7 @@ class BigBen(utils.Cog):
         (17, 4, 2022): "Easter Bong",
         (9, 4, 2023): "Easter Bong",
         (31, 3, 2024): "Easter Bong",
-    }  # (DD, MM): Output
+    }  # (DD, MM, YYYY?): Output
 
     def __init__(self, bot:utils.Bot):
         super().__init__(bot)
@@ -184,7 +186,7 @@ class BigBen(utils.Cog):
                 except Exception:
                     self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
         except Exception as e:
-            self.logger.info(f"Failed sending message to guild (G{message.guild.id}) - {e}")
+            self.logger.info(f"Failed sending message to guild (G{ctx.guild.id}) - {e}")
             return await ctx.send(f"Failed - {e}.")
         await ctx.send("Done.")
 

@@ -22,9 +22,9 @@ class BotSettings(utils.Cog):
             await db("INSERT INTO guild_settings (guild_id, prefix) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET prefix=excluded.prefix", ctx.guild.id, new_prefix)
         await ctx.send(f"My prefix has been updated to `{new_prefix}`.")
 
-    @commands.group(cls=utils.Group, enabled=False)
+    @commands.group(cls=utils.Group)
     @commands.has_permissions(manage_guild=True)
-    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    @commands.bot_has_permissions(send_messages=True, embed_links=True, add_reactions=True)
     @commands.guild_only()
     async def setup(self, ctx:utils.Context):
         """Run the bot setup"""
@@ -41,17 +41,17 @@ class BotSettings(utils.Cog):
             {
                 'display': lambda c: "Set bong channel (currently {0})".format(settings_mention(c, 'bong_channel_id')),
                 'converter_args': [("Where do you want all the bong messages to go to?", "bong channel", commands.TextChannelConverter)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_channel_id'),
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_channel_id'),
             },
             {
                 'display': lambda c: "Set 'first bong reaction' role (currently {0})".format(settings_mention(c, 'bong_role_id')),
                 'converter_args': [("Which role should the first reaction to the bong message get?", "bong channel", commands.RoleConverter)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_role_id'),
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_role_id'),
             },
             {
                 'display': lambda c: "Set bong reaction emoji (currently {0})".format(c.bot.guild_settings[c.guild.id]['bong_emoji']),
                 'converter_args': [("What should emoji should be added to each bong message?", "bong emoji", str)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('bong_emoji'),
+                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_emoji'),
             },
         )
         try:
@@ -61,7 +61,7 @@ class BotSettings(utils.Cog):
             pass
 
     @commands.group(cls=utils.Group, enabled=False)
-    @commands.bot_has_permissions(send_messages=True, embed_links=True)
+    @commands.bot_has_permissions(send_messages=True, embed_links=True, add_reactions=True)
     @utils.cooldown.cooldown(1, 60, commands.BucketType.member)
     @commands.guild_only()
     async def usersettings(self, ctx:utils.Context):
