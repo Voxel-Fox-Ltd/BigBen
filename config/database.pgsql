@@ -36,3 +36,11 @@ CREATE TABLE bong_log(
     timestamp TIMESTAMP
     message_timestamp TIMESTAMP
 );
+
+
+CREATE TABLE bong_override_text(
+    guild_id BIGINT,
+    date DATE,
+    text VARCHAR(200),
+    PRIMARY KEY (guild_id, date)
+);

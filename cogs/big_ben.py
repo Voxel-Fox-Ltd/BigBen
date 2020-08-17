@@ -59,7 +59,7 @@ class BigBen(utils.Cog):
         self.bot.dispatch("bong")
 
     @utils.Cog.listener("on_bong")
-    async def do_bong(self):
+    async def do_bong(self, bong_guild_id:int=None):
         """Dispatch the bong message"""
 
         # Get text
@@ -74,9 +74,14 @@ class BigBen(utils.Cog):
         self.logger.info(f"Sending bong message text '{text}'")
 
         # Clear caches
-        self.bong_messages.clear()
-        self.other_people_bong_this_hour.clear()
+        if bong_guild_id is None:
+            self.bong_messages.clear()
+            self.other_people_bong_this_hour.clear()
         for guild_id, settings in self.bot.guild_settings.copy().items():
+
+            # See if we give a shit about this guild
+            if bong_guild_id is not None and bong_guild_id != guild_id:
+                continue
 
             # Try for the guild
             try:
@@ -87,9 +92,12 @@ class BigBen(utils.Cog):
                     self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
                     continue
 
+                # See if we should get some other text
+                override_text = settings['override_text'].get(f"{now.month}-{now.day}")
+
                 # Send message
                 try:
-                    message = await channel.send(text)
+                    message = await channel.send(override_text or text)
                 except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                     self.logger.info(f"Send failed - {e} (G{guild_id}/C{settings['bong_channel_id']})")
                     continue
@@ -112,8 +120,11 @@ class BigBen(utils.Cog):
         self.logger.info("Done sending bong messages")
 
     @utils.Cog.listener("on_bong")
-    async def update_profile_picture(self):
+    async def update_profile_picture(self, bong_guild_id:int=None):
         """Update the bot's profile picture"""
+
+        if bong_guild_id is not None:
+            return
 
         with open(f"config/images/{dt.utcnow().hour % 12}.png", "rb") as a:
             data = a.read()
@@ -123,72 +134,11 @@ class BigBen(utils.Cog):
 
     @commands.command(cls=utils.Command, hidden=True)
     @commands.has_permissions(manage_guild=True)
-    @commands.is_owner()
-    async def debugbong(self, ctx:utils.Context):
-        """Do the bong"""
-
-        # See if it should post
-        now = dt.utcnow()
-
-        # Get text
-        text = self.BONG_TEXT.get(
-            (now.day, now.month, now.year),
-            self.BONG_TEXT.get(
-                (now.day, now.month),
-                self.DEFAULT_BONG_TEXT
-            )
-        ).format(now)
-
-        # Post out
-        for guild_id, settings in self.bot.guild_settings.copy().items():
-            if guild_id != ctx.guild.id:
-                continue
-            try:
-                message = await self.bot.get_channel(settings['bong_channel_id']).send(text)
-                self.bong_messages.append(message.id)
-                self.logger.info(f"Sent bong message to channel (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-                emoji = settings['bong_emoji']
-                if emoji is not None:
-                    try:
-                        await message.add_reaction(emoji)
-                        self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-                    except Exception:
-                        self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-            except Exception as e:
-                self.logger.info(f"Failed sending message to guild (G{message.guild.id}) - {e}")
-
-    @commands.command(cls=utils.Command, hidden=True)
-    @commands.has_permissions(manage_guild=True)
     async def testbong(self, ctx:utils.Context):
         """Send a test bong"""
 
-        # Get text
-        now = dt.utcnow()
-        text = "Test " + self.BONG_TEXT.get(
-            (now.day, now.month, now.year),
-            self.BONG_TEXT.get(
-                (now.day, now.month),
-                self.DEFAULT_BONG_TEXT
-            )
-        ).format(now)
-
-        # Post out
-        settings = self.bot.guild_settings[ctx.guild.id]
-        try:
-            message = await self.bot.get_channel(settings['bong_channel_id']).send(text)
-            self.bong_messages.append(message.id)
-            self.logger.info(f"Sent bong message to channel (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-            emoji = settings['bong_emoji']
-            if emoji is not None:
-                try:
-                    await message.add_reaction(emoji)
-                    self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-                except Exception:
-                    self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-        except Exception as e:
-            self.logger.info(f"Failed sending message to guild (G{ctx.guild.id}) - {e}")
-            return await ctx.send(f"Failed - {e}.")
-        await ctx.send("Done.")
+        self.bot.dispatch("bong", ctx.guild.id)
+        return await ctx.send("Dispatched test bong.")
 
     @bing_bong.before_loop
     async def before_bing_bong(self):

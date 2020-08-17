@@ -53,6 +53,7 @@ class CustomBot(commands.AutoShardedBot):
             'bong_channel_id': None,
             'bong_role_id': None,
             'bong_emoji': None,
+            'override_text': {},
         }
         self.DEFAULT_USER_SETTINGS = {
         }
@@ -94,6 +95,10 @@ class CustomBot(commands.AutoShardedBot):
         for row in data:
             for key, value in row.items():
                 self.guild_settings[row['guild_id']][key] = value
+
+        data = await self.get_all_table_data(db, "bong_override_text")
+        for row in data:
+            self.guild_settings[row['guild_id']]['override_text'][f"{row['date'].month}-{row['date'].day}"] = row['text']
 
         # Get user settings
         data = await self.get_all_table_data(db, "user_settings")
