@@ -20,10 +20,12 @@ class SimpleMenuSource(menus.ListPageSource):
 class BigBen(utils.Cog):
 
     DEFAULT_BONG_TEXT = "Bong"
+    # [reminder] PEP 8 says to use a leading comma, so just do that
     BONG_TEXT = {
         (1, 1): "{0.year} Bong",
         (14, 2): "Valentine's Bong",
         (1, 4): "Bing",
+        (22, 4): "Earth Bong",
         (2, 7): "Midway Bong",
         (6, 9): "Birthday Bong",
         (31, 10): "Halloween Bong",
