@@ -285,6 +285,8 @@ class BigBen(utils.Cog):
         # Output to user baybeeee
         fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
         with utils.Embed() as embed:
+            # Build the embed   
+            embed = discord.Embed(title= f"{ctx.author.name}'s average reaction time")
             embed.set_image(url="attachment://activity.png")
         await ctx.send(embed=embed, file=discord.File("activity.png"))
 
