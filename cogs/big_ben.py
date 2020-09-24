@@ -24,6 +24,7 @@ class BigBen(utils.Cog):
         (1, 1): "{0.year} Bong",
         (14, 2): "Valentine's Bong",
         (1, 4): "Bing",
+        (22, 4): "Earth Bong",
         (2, 7): "Midway Bong",
         (6, 9): "Birthday Bong",
         (31, 10): "Halloween Bong",
@@ -284,6 +285,8 @@ class BigBen(utils.Cog):
         # Output to user baybeeee
         fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
         with utils.Embed() as embed:
+            # Build the embed   
+            embed = discord.Embed(title= f"{ctx.author.name}'s average reaction time")
             embed.set_image(url="attachment://activity.png")
         await ctx.send(embed=embed, file=discord.File("activity.png"))
 

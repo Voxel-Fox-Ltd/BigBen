@@ -33,7 +33,7 @@ CREATE TABLE channel_list(
 CREATE TABLE bong_log(
     guild_id BIGINT,
     user_id BIGINT,
-    timestamp TIMESTAMP
+    timestamp TIMESTAMP,
     message_timestamp TIMESTAMP
 );
 
