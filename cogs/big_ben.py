@@ -41,7 +41,7 @@ class BigBen(utils.Cog):
         self.last_posted_hour: int = None
         self.bing_bong.start()
         self.bong_messages = []
-        self.other_people_bong_this_hour = []
+        self.added_bong_reactions = []
 
     def cog_unload(self):
         self.bing_bong.cancel()
@@ -76,7 +76,7 @@ class BigBen(utils.Cog):
         # Clear caches
         if bong_guild_id is None:
             self.bong_messages.clear()
-            self.other_people_bong_this_hour.clear()
+            self.added_bong_reactions.clear()
         for guild_id, settings in self.bot.guild_settings.copy().items():
 
             # See if we give a shit about this guild
@@ -203,7 +203,7 @@ class BigBen(utils.Cog):
             return
 
         # Don't respond if they already got a reaction
-        if (message.guild.id, message.author.id) in self.other_people_bong_this_hour:
+        if (message.guild.id, message.author.id) in self.added_bong_reactions:
             return
 
         # Check valid string
@@ -219,7 +219,7 @@ class BigBen(utils.Cog):
                 await message.add_reaction("<:LateBong:699701882255311031>")
             else:
                 await message.add_reaction("<:Bong:699705094253576222>")
-            self.other_people_bong_this_hour.append((message.guild.id, message.author.id))
+            self.added_bong_reactions.append((message.guild.id, message.author.id))
         except (discord.Forbidden, discord.NotFound) as e:
             self.logger.info(f"Couldn't react to message {message.id} - {e}")
         except discord.HTTPException as e:
@@ -228,7 +228,7 @@ class BigBen(utils.Cog):
     @commands.command(cls=utils.Command)
     @commands.bot_has_permissions(send_messages=True)
     @commands.guild_only()
-    async def bongcount(self, ctx, user:discord.Member=None):
+    async def bongcount(self, ctx:utils.Context, user:discord.Member=None):
         """Counts how many times a user has gotten the first bong reaction"""
 
         user = user or ctx.author
@@ -242,7 +242,7 @@ class BigBen(utils.Cog):
     @commands.command(cls=utils.Command)
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
-    async def leaderboard(self, ctx):
+    async def leaderboard(self, ctx:utils.Context):
         """Gives you the bong leaderboard"""
 
         async with self.bot.database() as db:
@@ -254,7 +254,7 @@ class BigBen(utils.Cog):
         menu = menus.MenuPages(source=source)
         await menu.start(ctx)
 
-    @commands.command(cls=utils.Command)
+    @commands.command(cls=utils.Command, enabled=False)
     @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
     @commands.guild_only()
     async def bongdist(self, ctx:utils.Context, user:discord.Member=None):
@@ -276,7 +276,6 @@ class BigBen(utils.Cog):
             i.set_facecolor('lightblue')
 
         # Fix axies
-        # ax.axis('off')
         ax.grid(True)
 
         # Tighten border
