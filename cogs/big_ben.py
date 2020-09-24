@@ -24,6 +24,7 @@ class BigBen(utils.Cog):
         (1, 1): "{0.year} Bong",
         (14, 2): "Valentine's Bong",
         (1, 4): "Bing",
+        (22, 4): "Earth Bong",
         (2, 7): "Midway Bong",
         (6, 9): "Birthday Bong",
         (31, 10): "Halloween Bong",
