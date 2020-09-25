@@ -139,6 +139,12 @@ class BigBen(utils.Cog):
                 self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
         self.logger.info("Done adding bong emojis")
 
+        # Delete channels that we should no longer care about
+        async with self.bot.database() as db:
+            await db("UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT)", channels_to_delete)
+        for guild_id in channels_to_delete:
+            self.bot.guild_settings[guild_id]['bong_channel_id'] = None
+
     @utils.Cog.listener("on_bong")
     async def update_profile_picture(self, bong_guild_id:int=None):
         """Update the bot's profile picture"""
@@ -305,7 +311,7 @@ class BigBen(utils.Cog):
         fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
         with utils.Embed() as embed:
             # Build the embed
-            embed = discord.Embed(title= f"{ctx.author.name}'s average reaction time")
+            embed = discord.Embed(title=f"{ctx.author.name}'s average reaction time")
             embed.set_image(url="attachment://activity.png")
         await ctx.send(embed=embed, file=discord.File("activity.png"))
 
