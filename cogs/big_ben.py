@@ -88,6 +88,10 @@ class BigBen(utils.Cog):
             if bong_guild_id is not None and bong_guild_id != guild_id:
                 continue
 
+            # See if we want to handle this guild, or if that's up to another process
+            if (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
+                continue
+
             # Try for the guild
             try:
 
@@ -98,7 +102,7 @@ class BigBen(utils.Cog):
                     channel = None
                 if channel is None:
                     self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
-                    channels_to_delete.append(guild_id)  # WARNING: this will delete inaccessible channels when the bot is running multiple processes, which you do NOT WANT
+                    channels_to_delete.append(guild_id)
                     continue
 
                 # see if we have permission to send messages there
