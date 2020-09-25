@@ -41,8 +41,8 @@ class BigBen(utils.Cog):
         super().__init__(bot)
         self.last_posted_hour: int = None
         self.bing_bong.start()
-        self.bong_messages = []
-        self.added_bong_reactions = []
+        self.bong_messages = set()
+        self.added_bong_reactions = set()
 
     def cog_unload(self):
         self.bing_bong.cancel()
@@ -117,7 +117,7 @@ class BigBen(utils.Cog):
                     continue
 
                 # Cache message
-                self.bong_messages.append(message.id)
+                self.bong_messages.add(message.id)
                 self.logger.info(f"Sent bong message to channel (G{message.guild.id}/C{message.channel.id}/M{message.id})")
 
                 # Set up our emoji to be added
@@ -184,7 +184,7 @@ class BigBen(utils.Cog):
 
         # Database handle
         self.logger.info(f"Guild {reaction.message.guild.id} with user {user.id} in {dt.utcnow() - reaction.message.created_at}")
-        self.bong_messages.remove(reaction.message.id)
+        self.bong_messages.discard(reaction.message.id)
         async with self.bot.database() as db:
             await db(
                 "INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)",
@@ -239,7 +239,7 @@ class BigBen(utils.Cog):
                 await message.add_reaction("<:LateBong:699701882255311031>")
             else:
                 await message.add_reaction("<:Bong:699705094253576222>")
-            self.added_bong_reactions.append((message.guild.id, message.author.id))
+            self.added_bong_reactions.add((message.guild.id, message.author.id))
         except (discord.Forbidden, discord.NotFound) as e:
             self.logger.info(f"Couldn't react to message {message.id} - {e}")
         except discord.HTTPException as e:
