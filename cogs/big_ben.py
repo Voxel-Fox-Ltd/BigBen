@@ -75,9 +75,13 @@ class BigBen(utils.Cog):
         self.logger.info(f"Sending bong message text '{text}'")
 
         # Clear caches
+        channels_to_delete = []
+        emojis_to_add = []
         if bong_guild_id is None:
             self.bong_messages.clear()
             self.added_bong_reactions.clear()
+
+        # Let's see our cached guilds
         for guild_id, settings in self.bot.guild_settings.copy().items():
 
             # See if we give a shit about this guild
@@ -88,9 +92,18 @@ class BigBen(utils.Cog):
             try:
 
                 # Grab channel
-                channel = self.bot.get_channel(settings['bong_channel_id'])
+                try:
+                    channel = self.bot.get_channel(settings['bong_channel_id']) or await self.bot.fetch_channel(settings['bong_channel_id'])
+                except discord.HTTPException:
+                    channel = None
                 if channel is None:
                     self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
+                    channels_to_delete.append(guild_id)
+                    continue
+
+                # see if we have permission to send messages there
+                if not channel.permissions_for(channel.guild.me).send_messages:
+                    self.logger.info(f"Send failed - no permissions (G{guild_id}/C{settings['bong_channel_id']})")
                     continue
 
                 # See if we should get some other text
@@ -107,18 +120,24 @@ class BigBen(utils.Cog):
                 self.bong_messages.append(message.id)
                 self.logger.info(f"Sent bong message to channel (G{message.guild.id}/C{message.channel.id}/M{message.id})")
 
-                # Add emoji
+                # Set up our emoji to be added
                 emoji = settings['bong_emoji']
                 if emoji is not None:
-                    try:
-                        await message.add_reaction(emoji)
-                        self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-                    except Exception:
-                        self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
+                    emojis_to_add.append((message, emoji))
 
             except Exception as e:
                 self.logger.info(f"Failed sending message to guild (G{message.guild.id}) - {e}")
         self.logger.info("Done sending bong messages")
+
+        # Add the emojis as necessary
+        self.logger.info("Trying to add bong emojis")
+        for message, emoji in emojis_to_add:
+            try:
+                await message.add_reaction(emoji)
+                self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
+            except Exception:
+                self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
+        self.logger.info("Done adding bong emojis")
 
     @utils.Cog.listener("on_bong")
     async def update_profile_picture(self, bong_guild_id:int=None):
@@ -285,7 +304,7 @@ class BigBen(utils.Cog):
         # Output to user baybeeee
         fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
         with utils.Embed() as embed:
-            # Build the embed   
+            # Build the embed
             embed = discord.Embed(title= f"{ctx.author.name}'s average reaction time")
             embed.set_image(url="attachment://activity.png")
         await ctx.send(embed=embed, file=discord.File("activity.png"))
