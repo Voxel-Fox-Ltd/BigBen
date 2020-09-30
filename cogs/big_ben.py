@@ -136,16 +136,19 @@ class BigBen(utils.Cog):
         # Add the emojis as necessary
         self.logger.info("Trying to add bong emojis")
         for message, emoji in emojis_to_add:
+            if not message.channel.permissions_for(message.guild.me).add_reactions:
+                self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{settings['bong_channel_id']}/M{message.id})")
+                continue
             try:
                 await message.add_reaction(emoji)
                 self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-            except Exception:
-                self.logger.info(f"Couldn't add reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
+            except Exception as e:
+                self.logger.info(f"Add reaction failed - {e} (G{message.guild.id}/C{message.channel.id}/M{message.id})")
         self.logger.info("Done adding bong emojis")
 
         # Delete channels that we should no longer care about
         async with self.bot.database() as db:
-            await db("UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT)", channels_to_delete)
+            await db("UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])", channels_to_delete)
         for guild_id in channels_to_delete:
             self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
@@ -175,30 +178,32 @@ class BigBen(utils.Cog):
         await self.bot.wait_until_ready()
 
     @utils.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.User):
+    async def on_raw_reaction_add(self, payload:discord.RawReactionActionEvent):
         """Waits for a reaction add"""
 
+        # reaction:discord.Reaction, user:discord.User
+
         # Check it's on a big ben message
-        if reaction.message.id not in self.bong_messages:
+        if payload.message_id not in self.bong_messages:
             return
 
         # Check they gave the right reaction
-        guild = reaction.message.guild
+        guild = self.bot.get_guild(payload.guild_id)
         emoji = self.bot.guild_settings[guild.id]['bong_emoji']
-        if emoji and str(reaction.emoji) != emoji:
+        if emoji and str(payload.emoji) != emoji:
             return
 
         # Check it's not a bot
-        if user.bot:
+        if self.bot.get_user(payload.user_id).bot:
             return
 
         # Database handle
-        self.logger.info(f"Guild {reaction.message.guild.id} with user {user.id} in {dt.utcnow() - reaction.message.created_at}")
-        self.bong_messages.discard(reaction.message.id)
+        self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message_id).created_at}")
+        self.bong_messages.discard(payload.message_id)
         async with self.bot.database() as db:
             await db(
                 "INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)",
-                guild.id, user.id, dt.utcnow(), reaction.message.created_at,
+                guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message_id).created_at,
             )
 
         # Check they have a role set up
@@ -212,10 +217,10 @@ class BigBen(utils.Cog):
             return self.logger.info(f"Bong role doesn't exist (G{guild.id})")
         try:
             for member in bong_role.members:
-                if user.id != member.id:
+                if payload.user_id != member.id:
                     await member.remove_roles(bong_role)
                     self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{member.id})")
-            await guild.get_member(user.id).add_roles(bong_role)
+            await guild.get_member(payload.user_id).add_roles(bong_role)
             self.logger.info(f"Added bong role ({bong_role.id}) to member (G{guild.id}/U{member.id})")
         except discord.Forbidden:
             return self.logger.info(f"Can't manage roles in guild {guild.id}")
