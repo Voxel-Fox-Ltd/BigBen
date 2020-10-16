@@ -27,7 +27,7 @@ class BigBen(utils.Cog):
         (22, 4): "Earth Bong",
         (2, 7): "Midway Bong",
         (6, 9): "Birthday Bong",
-        (31, 10): "Halloween Bong",
+        (31, 10): "Spooky Bong",
         (25, 12): "Christmas Bong",
 
         (12, 4, 2020): "Easter Bong",
