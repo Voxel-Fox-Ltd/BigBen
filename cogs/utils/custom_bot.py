@@ -51,6 +51,7 @@ class CustomBot(commands.AutoShardedBot):
         self.DEFAULT_GUILD_SETTINGS = {
             'prefix': self.config['default_prefix'],
             'bong_channel_id': None,
+            'bong_channel_webhook': None,
             'bong_role_id': None,
             'bong_emoji': None,
             'override_text': {},

@@ -2,6 +2,7 @@ CREATE TABLE guild_settings(
     guild_id BIGINT PRIMARY KEY,
     prefix VARCHAR(30),
     bong_channel_id BIGINT,
+    bong_channel_webhook VARCHAR(150),
     bong_role_id BIGINT,
     bong_emoji VARCHAR(50)
 );

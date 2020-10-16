@@ -1,6 +1,22 @@
+import discord
 from discord.ext import commands
 
 from cogs import utils
+
+
+async def bong_channel_storage_whatever(menu, channel:discord.TextChannel):
+    await utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_channel_id')(menu, channel)
+    try:
+        webhook = await channel.create_webhook(name="Big Ben")
+    except discord.HTTPException:
+        return
+    async with menu.context.bot.database() as db:
+        await db(
+            """INSERT INTO guild_settings (guild_id, bong_channel_webhook)
+            VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET bong_channel_webhook=$2""",
+            menu.context.guild.id, webhook.url
+        )
+    menu.context.bot.guild_settings[menu.context.guild.id]["bong_channel_webhook"] = webhook.url
 
 
 class BotSettings(utils.Cog):
@@ -41,7 +57,7 @@ class BotSettings(utils.Cog):
             {
                 'display': lambda c: "Set bong channel (currently {0})".format(settings_mention(c, 'bong_channel_id')),
                 'converter_args': [("Where do you want all the bong messages to go to?", "bong channel", commands.TextChannelConverter)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_channel_id'),
+                'callback': bong_channel_storage_whatever,
             },
             {
                 'display': lambda c: "Set 'first bong reaction' role (currently {0})".format(settings_mention(c, 'bong_role_id')),

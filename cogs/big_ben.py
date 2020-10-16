@@ -76,7 +76,6 @@ class BigBen(utils.Cog):
 
         # Clear caches
         channels_to_delete = []
-        emojis_to_add = []
         if bong_guild_id is None:
             self.bong_messages.clear()
             self.added_bong_reactions.clear()
@@ -95,56 +94,68 @@ class BigBen(utils.Cog):
             # Try for the guild
             try:
 
-                # Grab channel
-                try:
-                    channel = self.bot.get_channel(settings['bong_channel_id']) or await self.bot.fetch_channel(settings['bong_channel_id'])
-                except discord.HTTPException:
-                    channel = None
-                if channel is None:
-                    self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
-                    channels_to_delete.append(guild_id)
+                # Lets set our channel ID here
+                channel_id = settings['bong_channel_id']
+                if channel_id is None:
                     continue
 
-                # see if we have permission to send messages there
-                if not channel.permissions_for(channel.guild.me).send_messages:
-                    self.logger.info(f"Send failed - no permissions (G{guild_id}/C{settings['bong_channel_id']})")
-                    continue
+                # Can we hope we have a webhook?
+                if settings.get("bong_channel_webhook"):
+
+                    # Grab webook
+                    webhook_url = settings.get("bong_channel_webhook")
+                    channel = discord.Webhook.from_url(webhook_url, adapter=discord.AsyncWebhookAdapter(self.bot.session))
+
+                # Apparently not
+                else:
+
+                    # Grab channel
+                    try:
+                        channel = self.bot.get_channel(settings['bong_channel_id']) or await self.bot.fetch_channel(settings['bong_channel_id'])
+                    except discord.HTTPException:
+                        channel = None
+                    if channel is None:
+                        self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
+                        channels_to_delete.append(guild_id)
+                        continue
+
+                    # see if we have permission to send messages there
+                    if not channel.permissions_for(channel.guild.me).send_messages:
+                        self.logger.info(f"Send failed - no permissions (G{guild_id}/C{settings['bong_channel_id']})")
+                        continue
 
                 # See if we should get some other text
                 override_text = settings['override_text'].get(f"{now.month}-{now.day}")
 
                 # Send message
                 try:
-                    message = await channel.send(override_text or text)
+                    if isinstance(channel, discord.Webhook):
+                        message = await channel.send(override_text or text, wait=True)
+                    else:
+                        message = await channel.send(override_text or text)
                 except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                     self.logger.info(f"Send failed - {e} (G{guild_id}/C{settings['bong_channel_id']})")
                     continue
 
                 # Cache message
                 self.bong_messages.add(message.id)
-                self.logger.info(f"Sent bong message to channel (G{message.guild.id}/C{message.channel.id}/M{message.id})")
+                self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message.id})")
 
                 # Set up our emoji to be added
                 emoji = settings['bong_emoji']
                 if emoji is not None:
-                    emojis_to_add.append((message, emoji))
+                    if message.channel is not None and message.channel.permissions_for(message.guild.me).add_reactions is False:
+                        self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{channel_id}/M{message.id})")
+                        continue
+                    try:
+                        await self.bot.http.add_reaction(channel_id, message.id, discord.Message._emoji_reaction(emoji))
+                        self.logger.info(f"Added reaction to bong message (G{guild_id}/C{channel_id}/M{message.id})")
+                    except Exception as e:
+                        self.logger.info(f"Add reaction failed - {e} (G{guild_id}/C{channel_id}/M{message.id})")
 
             except Exception as e:
-                self.logger.info(f"Failed sending message to guild (G{message.guild.id}) - {e}")
+                self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
         self.logger.info("Done sending bong messages")
-
-        # Add the emojis as necessary
-        self.logger.info("Trying to add bong emojis")
-        for message, emoji in emojis_to_add:
-            if not message.channel.permissions_for(message.guild.me).add_reactions:
-                self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{settings['bong_channel_id']}/M{message.id})")
-                continue
-            try:
-                await message.add_reaction(emoji)
-                self.logger.info(f"Added reaction to bong message (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-            except Exception as e:
-                self.logger.info(f"Add reaction failed - {e} (G{message.guild.id}/C{message.channel.id}/M{message.id})")
-        self.logger.info("Done adding bong emojis")
 
         # Delete channels that we should no longer care about
         async with self.bot.database() as db:
@@ -201,6 +212,7 @@ class BigBen(utils.Cog):
         self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message_id).created_at}")
         self.bong_messages.discard(payload.message_id)
         async with self.bot.database() as db:
+            current_bong_member_rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1", guild.id)
             await db(
                 "INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)",
                 guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message_id).created_at,
@@ -211,17 +223,40 @@ class BigBen(utils.Cog):
         if role_id is None:
             return
 
-        # Role handle
-        bong_role = guild.get_role(role_id)
+        # Get the bong role
+        try:
+            bong_role = guild.get_role(role_id) or [i for i in await guild.fetch_roles() if i.id == role_id][0]
+        except (IndexError, discord.HTTPException):
+            bong_role = None
         if bong_role is None:
             return self.logger.info(f"Bong role doesn't exist (G{guild.id})")
+
+        # See who currently has it
+        if current_bong_member_rows:
+            current_bong_member_id = current_bong_member_rows[0]['user_id']
+            try:
+                current_bong_member = guild.get_member(current_bong_member_id) or await guild.fetch_member(current_bong_member_id)
+            except discord.HTTPException:
+                current_bong_member = None
+        else:
+            current_bong_member = None
+
+        # See who we want to give it to
+        new_bong_member = guild.get_member(payload.user_id) or await guild.fetch_member(payload.user_id)
+
+        # See if we can remove the role from the people who have it
         try:
-            for member in bong_role.members:
-                if payload.user_id != member.id:
-                    await member.remove_roles(bong_role)
-                    self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{member.id})")
-            await guild.get_member(payload.user_id).add_roles(bong_role)
-            self.logger.info(f"Added bong role ({bong_role.id}) to member (G{guild.id}/U{member.id})")
+
+            # See if we need to remove it from them
+            if current_bong_member and current_bong_member.id != new_bong_member.id:
+                await current_bong_member.remove_roles(bong_role)
+                self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{current_bong_member.id})")
+
+            # Add the role to them
+            await new_bong_member.add_roles(bong_role)
+            self.logger.info(f"Added bong role ({bong_role.id}) to member (G{guild.id}/U{new_bong_member.id})")
+
+        # Oh well
         except discord.Forbidden:
             return self.logger.info(f"Can't manage roles in guild {guild.id}")
 
