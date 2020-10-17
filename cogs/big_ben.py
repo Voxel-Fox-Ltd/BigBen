@@ -111,17 +111,17 @@ class BigBen(utils.Cog):
 
                     # Grab channel
                     try:
-                        channel = self.bot.get_channel(settings['bong_channel_id']) or await self.bot.fetch_channel(settings['bong_channel_id'])
+                        channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
                     except discord.HTTPException:
                         channel = None
                     if channel is None:
-                        self.logger.info(f"Send failed - missing channel (G{guild_id}/C{settings['bong_channel_id']})")
+                        self.logger.info(f"Send failed - missing channel (G{guild_id}/C{channel_id})")
                         channels_to_delete.append(guild_id)
                         continue
 
                     # see if we have permission to send messages there
                     if not channel.permissions_for(channel.guild.me).send_messages:
-                        self.logger.info(f"Send failed - no permissions (G{guild_id}/C{settings['bong_channel_id']})")
+                        self.logger.info(f"Send failed - no permissions (G{guild_id}/C{channel_id})")
                         continue
 
                 # See if we should get some other text
@@ -134,7 +134,7 @@ class BigBen(utils.Cog):
                     else:
                         message = await channel.send(override_text or text)
                 except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
-                    self.logger.info(f"Send failed - {e} (G{guild_id}/C{settings['bong_channel_id']})")
+                    self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
                     continue
 
                 # Cache message
@@ -199,13 +199,15 @@ class BigBen(utils.Cog):
             return
 
         # Check they gave the right reaction
-        guild = self.bot.get_guild(payload.guild_id)
-        emoji = self.bot.guild_settings[guild.id]['bong_emoji']
+        emoji = self.bot.guild_settings[payload.guild_id]['bong_emoji']
         if emoji and str(payload.emoji) != emoji:
             return
+        guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
 
         # Check it's not a bot
-        if self.bot.get_user(payload.user_id).bot:
+        if payload.user_id == self.bot.user.id:
+            return
+        if (self.bot.get_user(payload.user_id) or await self.bot.fetch_user(payload.user_id)).bot:
             return
 
         # Database handle
@@ -248,7 +250,7 @@ class BigBen(utils.Cog):
         try:
 
             # See if we need to remove it from them
-            if current_bong_member and current_bong_member.id != new_bong_member.id:
+            if current_bong_member is not None and current_bong_member.id != new_bong_member.id:
                 await current_bong_member.remove_roles(bong_role)
                 self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{current_bong_member.id})")
 
