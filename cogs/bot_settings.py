@@ -6,6 +6,8 @@ from cogs import utils
 
 async def bong_channel_storage_whatever(menu, channel:discord.TextChannel):
     await utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_channel_id')(menu, channel)
+    if channel is None:
+        return
     try:
         webhook = await channel.create_webhook(name="Big Ben")
     except discord.HTTPException:
