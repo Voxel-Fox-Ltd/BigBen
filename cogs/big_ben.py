@@ -73,6 +73,7 @@ class BigBen(utils.Cog):
             )
         ).format(now)
         self.logger.info(f"Sending bong message text '{text}'")
+        avatar_url = f"https://raw.githubusercontent.com/Voxel-Fox-Ltd/BigBen/master/config/images/{now.hour % 12}.png"
 
         # Clear caches
         channels_to_delete = []
@@ -100,11 +101,17 @@ class BigBen(utils.Cog):
                     continue
 
                 # Can we hope we have a webhook?
+                payload = {}
                 if settings.get("bong_channel_webhook"):
 
                     # Grab webook
                     webhook_url = settings.get("bong_channel_webhook")
                     channel = discord.Webhook.from_url(webhook_url, adapter=discord.AsyncWebhookAdapter(self.bot.session))
+                    payload.update({
+                        "wait": True,
+                        "username": self.bot.user.name,
+                        "avatar_url": avatar_url,
+                    })
 
                 # Apparently not
                 else:
@@ -126,13 +133,11 @@ class BigBen(utils.Cog):
 
                 # See if we should get some other text
                 override_text = settings['override_text'].get(f"{now.month}-{now.day}")
+                payload['content'] = override_text or text
 
                 # Send message
                 try:
-                    if isinstance(channel, discord.Webhook):
-                        message = await channel.send(override_text or text, wait=True)
-                    else:
-                        message = await channel.send(override_text or text)
+                    message = await channel.send(**payload)
                 except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                     self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
                     continue
