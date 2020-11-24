@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime as dt
 
 import discord
@@ -59,6 +60,79 @@ class BigBen(utils.Cog):
             return
         self.bot.dispatch("bong")
 
+    async def send_guild_bong_message(self, text, now, guild_id, settings, channels_to_delete):
+
+        avatar_url = f"https://raw.githubusercontent.com/Voxel-Fox-Ltd/BigBen/master/config/images/{now.hour % 12}.png"
+
+        # Try for the guild
+        try:
+
+            # Lets set our channel ID here
+            channel_id = settings['bong_channel_id']
+            if channel_id is None:
+                return
+
+            # Can we hope we have a webhook?
+            payload = {}
+            if settings.get("bong_channel_webhook"):
+
+                # Grab webook
+                webhook_url = settings.get("bong_channel_webhook")
+                channel = discord.Webhook.from_url(webhook_url, adapter=discord.AsyncWebhookAdapter(self.bot.session))
+                payload.update({
+                    "wait": True,
+                    "username": self.bot.user.name,
+                    "avatar_url": avatar_url,
+                })
+
+            # Apparently not
+            else:
+
+                # Grab channel
+                try:
+                    channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
+                except discord.HTTPException:
+                    channel = None
+                if channel is None:
+                    self.logger.info(f"Send failed - missing channel (G{guild_id}/C{channel_id})")
+                    channels_to_delete.append(guild_id)
+                    return
+
+                # see if we have permission to send messages there
+                if not channel.permissions_for(channel.guild.me).send_messages:
+                    self.logger.info(f"Send failed - no permissions (G{guild_id}/C{channel_id})")
+                    return
+
+            # See if we should get some other text
+            override_text = settings['override_text'].get(f"{now.month}-{now.day}")
+            payload['content'] = override_text or text
+
+            # Send message
+            try:
+                message = await channel.send(**payload)
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
+                self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
+                return
+
+            # Cache message
+            self.bong_messages.add(message.id)
+            self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message.id})")
+
+            # Set up our emoji to be added
+            emoji = settings['bong_emoji']
+            if emoji is not None:
+                if message.channel is not None and message.channel.permissions_for(message.guild.me).add_reactions is False:
+                    self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{channel_id}/M{message.id})")
+                    return
+                try:
+                    await self.bot.http.add_reaction(channel_id, message.id, discord.Message._emoji_reaction(emoji))
+                    self.logger.info(f"Added reaction to bong message (G{guild_id}/C{channel_id}/M{message.id})")
+                except Exception as e:
+                    self.logger.info(f"Add reaction failed - {e} (G{guild_id}/C{channel_id}/M{message.id})")
+
+        except Exception as e:
+            self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
+
     @utils.Cog.listener("on_bong")
     async def do_bong(self, bong_guild_id:int=None):
         """Dispatch the bong message"""
@@ -73,13 +147,15 @@ class BigBen(utils.Cog):
             )
         ).format(now)
         self.logger.info(f"Sending bong message text '{text}'")
-        avatar_url = f"https://raw.githubusercontent.com/Voxel-Fox-Ltd/BigBen/master/config/images/{now.hour % 12}.png"
 
         # Clear caches
         channels_to_delete = []
         if bong_guild_id is None:
-            self.bong_messages.clear()
-            self.added_bong_reactions.clear()
+            self.bong_messages.clear()  # Clear for the reacted to bong first role
+            self.added_bong_reactions.clear()  # Clear for the adding "bong" to people's messages
+
+        # Set up what we need to wait for
+        tasks_to_gather = []
 
         # Let's see our cached guilds
         for guild_id, settings in self.bot.guild_settings.copy().items():
@@ -92,74 +168,18 @@ class BigBen(utils.Cog):
             if (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
                 continue
 
-            # Try for the guild
-            try:
+            # See if we're still in that guild
+            if self.bot.get_guild(guild_id) is None:
+                continue
 
-                # Lets set our channel ID here
-                channel_id = settings['bong_channel_id']
-                if channel_id is None:
-                    continue
+            tasks_to_gather.append(self.send_guild_bong_message(
+                text, now, guild_id, settings, channels_to_delete,
+            ))
 
-                # Can we hope we have a webhook?
-                payload = {}
-                if settings.get("bong_channel_webhook"):
+        # Gather all of our data
+        await asyncio.gather(*tasks_to_gather, loop=self.bot.loop)
 
-                    # Grab webook
-                    webhook_url = settings.get("bong_channel_webhook")
-                    channel = discord.Webhook.from_url(webhook_url, adapter=discord.AsyncWebhookAdapter(self.bot.session))
-                    payload.update({
-                        "wait": True,
-                        "username": self.bot.user.name,
-                        "avatar_url": avatar_url,
-                    })
-
-                # Apparently not
-                else:
-
-                    # Grab channel
-                    try:
-                        channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
-                    except discord.HTTPException:
-                        channel = None
-                    if channel is None:
-                        self.logger.info(f"Send failed - missing channel (G{guild_id}/C{channel_id})")
-                        channels_to_delete.append(guild_id)
-                        continue
-
-                    # see if we have permission to send messages there
-                    if not channel.permissions_for(channel.guild.me).send_messages:
-                        self.logger.info(f"Send failed - no permissions (G{guild_id}/C{channel_id})")
-                        continue
-
-                # See if we should get some other text
-                override_text = settings['override_text'].get(f"{now.month}-{now.day}")
-                payload['content'] = override_text or text
-
-                # Send message
-                try:
-                    message = await channel.send(**payload)
-                except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
-                    self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
-                    continue
-
-                # Cache message
-                self.bong_messages.add(message.id)
-                self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message.id})")
-
-                # Set up our emoji to be added
-                emoji = settings['bong_emoji']
-                if emoji is not None:
-                    if message.channel is not None and message.channel.permissions_for(message.guild.me).add_reactions is False:
-                        self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{channel_id}/M{message.id})")
-                        continue
-                    try:
-                        await self.bot.http.add_reaction(channel_id, message.id, discord.Message._emoji_reaction(emoji))
-                        self.logger.info(f"Added reaction to bong message (G{guild_id}/C{channel_id}/M{message.id})")
-                    except Exception as e:
-                        self.logger.info(f"Add reaction failed - {e} (G{guild_id}/C{channel_id}/M{message.id})")
-
-            except Exception as e:
-                self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
+        # Sick we're done
         self.logger.info("Done sending bong messages")
 
         # Delete channels that we should no longer care about
