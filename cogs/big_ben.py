@@ -346,7 +346,7 @@ class BigBen(utils.Cog):
             rows = await db("SELECT user_id, count(user_id) FROM bong_log WHERE guild_id=$1 GROUP BY user_id ORDER BY count(user_id) DESC, user_id DESC", ctx.guild.id)
         if not rows:
             return await ctx.send("Nobody has reacted to the bong message yet on your server.")
-        lines = [f"{index}. {ctx.guild.get_member(row['user_id']).mention} ({row['count']} bongs)" for index, row in enumerate(rows, start=1) if ctx.guild.get_member(row['user_id'])]
+        lines = [f"{index}. <@{row['user_id']}> ({row['count']} bongs)" for index, row in enumerate(rows, start=1)]
         source = SimpleMenuSource(lines, per_page=10)
         menu = menus.MenuPages(source=source)
         await menu.start(ctx)
