@@ -188,18 +188,18 @@ class BigBen(utils.Cog):
         for guild_id in channels_to_delete:
             self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
-    @utils.Cog.listener("on_bong")
-    async def update_profile_picture(self, bong_guild_id:int=None):
-        """Update the bot's profile picture"""
+    # @utils.Cog.listener("on_bong")
+    # async def update_profile_picture(self, bong_guild_id:int=None):
+    #     """Update the bot's profile picture"""
 
-        if bong_guild_id is not None:
-            return
+    #     if bong_guild_id is not None:
+    #         return
 
-        with open(f"config/images/{dt.utcnow().hour % 12}.png", "rb") as a:
-            data = a.read()
-        self.logger.info("Updating bot user profile picture")
-        await self.bot.user.edit(avatar=data)
-        self.logger.info("Updated bot user profile picture successfully")
+    #     with open(f"config/images/{dt.utcnow().hour % 12}.png", "rb") as a:
+    #         data = a.read()
+    #     self.logger.info("Updating bot user profile picture")
+    #     await self.bot.user.edit(avatar=data)
+    #     self.logger.info("Updated bot user profile picture successfully")
 
     @commands.command(cls=utils.Command, hidden=True)
     @commands.has_permissions(manage_guild=True)
