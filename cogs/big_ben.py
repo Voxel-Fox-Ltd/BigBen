@@ -125,7 +125,7 @@ class BigBen(utils.Cog):
                     self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{channel_id}/M{message.id})")
                     return
                 try:
-                    await self.bot.http.add_reaction(channel_id, message.id, discord.Message._emoji_reaction(emoji))
+                    await self.bot.http.add_reaction(channel_id, message.id, emoji.strip('<>'))
                     self.logger.info(f"Added reaction to bong message (G{guild_id}/C{channel_id}/M{message.id})")
                 except Exception as e:
                     self.logger.info(f"Add reaction failed - {e} (G{guild_id}/C{channel_id}/M{message.id})")
@@ -184,7 +184,7 @@ class BigBen(utils.Cog):
                 ))
 
         # Gather all of our data
-        webhook_sent = asyncio.create_task(asyncio.gather(*tasks_to_gather))
+        webhook_sent = self.bot.loop.create_task(asyncio.gather(*tasks_to_gather))
         for i in tasks_to_await:
             await i
         asyncio.wait_for(webhook_sent)
