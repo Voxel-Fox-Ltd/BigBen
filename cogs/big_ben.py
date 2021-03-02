@@ -156,6 +156,7 @@ class BigBen(utils.Cog):
 
         # Set up what we need to wait for
         tasks_to_gather = []
+        tasks_to_await = []
 
         # Let's see our cached guilds
         for guild_id, settings in self.bot.guild_settings.copy().items():
@@ -172,12 +173,21 @@ class BigBen(utils.Cog):
             if self.bot.get_guild(guild_id) is None:
                 continue
 
-            tasks_to_gather.append(self.send_guild_bong_message(
-                text, now, guild_id, settings, channels_to_delete,
-            ))
+            # See if they have a webhook
+            if settings.get("bong_channel_webhook"):
+                tasks_to_gather.append(self.send_guild_bong_message(
+                    text, now, guild_id, settings, channels_to_delete,
+                ))
+            else:
+                tasks_to_await.append(self.send_guild_bong_message(
+                    text, now, guild_id, settings, channels_to_delete,
+                ))
 
         # Gather all of our data
-        await asyncio.gather(*tasks_to_gather, loop=self.bot.loop)
+        webhook_sent = asyncio.create_task(asyncio.gather(*tasks_to_gather))
+        for i in tasks_to_await:
+            await i
+        asyncio.wait_for(webhook_sent)
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
@@ -187,19 +197,6 @@ class BigBen(utils.Cog):
             await db("UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])", channels_to_delete)
         for guild_id in channels_to_delete:
             self.bot.guild_settings[guild_id]['bong_channel_id'] = None
-
-    # @utils.Cog.listener("on_bong")
-    # async def update_profile_picture(self, bong_guild_id:int=None):
-    #     """Update the bot's profile picture"""
-
-    #     if bong_guild_id is not None:
-    #         return
-
-    #     with open(f"config/images/{dt.utcnow().hour % 12}.png", "rb") as a:
-    #         data = a.read()
-    #     self.logger.info("Updating bot user profile picture")
-    #     await self.bot.user.edit(avatar=data)
-    #     self.logger.info("Updated bot user profile picture successfully")
 
     @commands.command(cls=utils.Command, hidden=True)
     @commands.has_permissions(manage_guild=True)
