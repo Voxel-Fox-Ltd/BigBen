@@ -187,7 +187,7 @@ class BigBen(utils.Cog):
         webhook_sent = self.bot.loop.create_task(asyncio.gather(*tasks_to_gather))
         for i in tasks_to_await:
             await i
-        asyncio.wait_for(webhook_sent)
+        asyncio.wait_for(webhook_sent, timeout=None)
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
