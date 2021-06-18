@@ -98,7 +98,7 @@ class BigBen(vbu.Cog):
                     return
 
             # See if we should get some other text
-            override_text = settings['override_text'].get(f"{now.month}-{now.day}")
+            override_text = settings.get('override_text', {}).get(f"{now.month}-{now.day}")
             payload['content'] = override_text or text
 
             # Send message
