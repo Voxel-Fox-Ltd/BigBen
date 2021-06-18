@@ -1,10 +1,9 @@
+import voxelbotutils as vbu
 import discord
 from discord.ext import commands
 
-from cogs import utils
 
-
-async def bong_channel_storage_whatever(menu, channel:discord.TextChannel):
+async def bong_channel_storage_whatever(menu, channel: discord.TextChannel):
     await utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_channel_id')(menu, channel)
     if channel is None:
         return
@@ -21,75 +20,69 @@ async def bong_channel_storage_whatever(menu, channel:discord.TextChannel):
     menu.context.bot.guild_settings[menu.context.guild.id]["bong_channel_webhook"] = webhook.url
 
 
-class BotSettings(utils.Cog):
+class BotSettings(vbu.Cog):
 
-    @commands.group(cls=utils.Group)
+    @vbu.group()
     @commands.has_permissions(manage_guild=True)
     @commands.bot_has_permissions(send_messages=True, embed_links=True, add_reactions=True)
     @commands.guild_only()
-    async def setup(self, ctx:utils.Context):
-        """Run the bot setup"""
+    async def setup(self, ctx: vbu.Context):
+        """
+        Run the bot setup.
+        """
 
         # Make sure it's only run as its own command, not a parent
         if ctx.invoked_subcommand is not None:
             return
 
         # Create settings menu
-        menu = utils.SettingsMenu()
-        settings_mention = utils.SettingsMenuOption.get_guild_settings_mention
-        menu.bulk_add_options(
-            ctx,
-            {
-                'display': lambda c: "Set bong channel (currently {0})".format(settings_mention(c, 'bong_channel_id')),
-                'converter_args': [("Where do you want all the bong messages to go to?", "bong channel", commands.TextChannelConverter)],
-                'callback': bong_channel_storage_whatever,
-            },
-            {
-                'display': lambda c: "Set 'first bong reaction' role (currently {0})".format(settings_mention(c, 'bong_role_id')),
-                'converter_args': [("Which role should the first reaction to the bong message get?", "bong channel", commands.RoleConverter)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_role_id'),
-            },
-            {
-                'display': lambda c: "Set bong reaction emoji (currently {0})".format(c.bot.guild_settings[c.guild.id]['bong_emoji']),
-                'converter_args': [("What should emoji should be added to each bong message?", "bong emoji", str)],
-                'callback': utils.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_emoji'),
-            },
+        menu = vbu.SettingsMenu()
+        settings_mention = vbu.SettingsMenuOption.get_guild_settings_mention
+        menu.add_multiple_options(
+            vbu.SettingsMenuOption(
+                ctx=ctx,
+                display=lambda c: "Set bong channel (currently {0})".format(settings_mention(c, 'bong_channel_id')),
+                converter_args=(
+                    vbu.SettingsMenuConverter(
+                        prompt="Where do you want all the bong messages to go to?",
+                        asking_for="bong channel",
+                        converter=commands.TextChannelConverter,
+                    ),
+                ),
+                callback=bong_channel_storage_whatever,
+            ),
+            vbu.SettingsMenuOption(
+                ctx=ctx,
+                display=lambda c: "Set 'first bong reaction' role (currently {0})".format(settings_mention(c, 'bong_role_id')),
+                converter_args=(
+                    vbu.SettingsMenuConverter(
+                        prompt="Which role should the first reaction to the bong message get?",
+                        asking_for="bong channel",
+                        converter=commands.RoleConverter,
+                    ),
+                ),
+                callback=vbu.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_role_id'),
+            ),
+            vbu.SettingsMenuOption(
+                ctx=ctx,
+                display=lambda c: "Set bong reaction emoji (currently {0})".format(c.bot.guild_settings[c.guild.id]['bong_emoji']),
+                converter_args=(
+                    vbu.SettingsMenuConverter(
+                        prompt="What should emoji should be added to each bong message?",
+                        asking_for="bong emoji",
+                        converter=str,
+                    ),
+                ),
+                callback=vbu.SettingsMenuOption.get_set_guild_settings_callback('guild_settings', 'bong_emoji'),
+            ),
         )
         try:
             await menu.start(ctx)
             await ctx.send("Done setting up!")
-        except utils.errors.InvokedMetaCommand:
-            pass
-
-    @commands.group(cls=utils.Group, enabled=False)
-    @commands.bot_has_permissions(send_messages=True, embed_links=True, add_reactions=True)
-    @utils.cooldown.cooldown(1, 60, commands.BucketType.member)
-    @commands.guild_only()
-    async def usersettings(self, ctx:utils.Context):
-        """Run the bot setup"""
-
-        # Make sure it's only run as its own command, not a parent
-        if ctx.invoked_subcommand is not None:
-            return
-
-        # Create settings menu
-        menu = utils.SettingsMenu()
-        settings_mention = utils.SettingsMenuOption.get_user_settings_mention
-        menu.bulk_add_options(
-            ctx,
-            {
-                'display': lambda c: "Set setting (currently {0})".format(settings_mention(c, 'setting_id')),
-                'converter_args': [("What do you want to set the setting to?", "setting channel", commands.TextChannelConverter)],
-                'callback': utils.SettingsMenuOption.get_set_user_settings_callback('user_settings', 'setting_id'),
-            },
-        )
-        try:
-            await menu.start(ctx)
-            await ctx.send("Done setting up!")
-        except utils.errors.InvokedMetaCommand:
+        except vbu.errors.InvokedMetaCommand:
             pass
 
 
-def setup(bot:utils.Bot):
+def setup(bot: vbu.Bot):
     x = BotSettings(bot)
     bot.add_cog(x)

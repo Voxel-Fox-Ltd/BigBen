@@ -2,23 +2,12 @@ import asyncio
 from datetime import datetime as dt
 
 import discord
-from discord.ext import commands
-from discord.ext import tasks
-from discord.ext import menus
+from discord.ext import commands, tasks
+import voxelbotutils as vbu
 from matplotlib import pyplot as plt
 
-from cogs import utils
 
-
-class SimpleMenuSource(menus.ListPageSource):
-
-    def format_page(self, menu, entries):
-        with utils.Embed(use_random_colour=True) as embed:
-            embed.description = '\n'.join(entries)
-        return embed
-
-
-class BigBen(utils.Cog):
+class BigBen(vbu.Cog):
 
     DEFAULT_BONG_TEXT = "Bong"
     BONG_TEXT = {
@@ -38,7 +27,7 @@ class BigBen(utils.Cog):
         (31, 3, 2024): "Easter Bong",
     }  # (DD, MM, YYYY?): Output
 
-    def __init__(self, bot:utils.Bot):
+    def __init__(self, bot: vbu.Bot):
         super().__init__(bot)
         self.last_posted_hour: int = None
         self.bing_bong.start()
@@ -50,7 +39,9 @@ class BigBen(utils.Cog):
 
     @tasks.loop(seconds=1)
     async def bing_bong(self):
-        """Do the bong"""
+        """
+        Do the bong.
+        """
 
         # See if it should post
         now = dt.utcnow()
@@ -60,7 +51,10 @@ class BigBen(utils.Cog):
             return
         self.bot.dispatch("bong")
 
-    async def send_guild_bong_message(self, text, now, guild_id, settings, channels_to_delete):
+    async def send_guild_bong_message(self, text: str, now: dt, guild_id: int, settings: dict, channels_to_delete: list):
+        """
+        An async function that does the actual sending of the bong message.
+        """
 
         avatar_url = f"https://raw.githubusercontent.com/Voxel-Fox-Ltd/BigBen/master/config/images/{now.hour % 12}.png"
 
@@ -133,9 +127,11 @@ class BigBen(utils.Cog):
         except Exception as e:
             self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
 
-    @utils.Cog.listener("on_bong")
-    async def do_bong(self, bong_guild_id:int=None):
-        """Dispatch the bong message"""
+    @vbu.Cog.listener("on_bong")
+    async def do_bong(self, bong_guild_id: int = None):
+        """
+        Dispatch the bong message.
+        """
 
         # Get text
         now = dt.utcnow()
@@ -198,10 +194,12 @@ class BigBen(utils.Cog):
         for guild_id in channels_to_delete:
             self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
-    @commands.command(cls=utils.Command, hidden=True)
+    @vbu.command(hidden=True)
     @commands.has_permissions(manage_guild=True)
-    async def testbong(self, ctx:utils.Context):
-        """Send a test bong"""
+    async def testbong(self, ctx: vbu.Context):
+        """
+        Send a test bong.
+        """
 
         self.bot.dispatch("bong", ctx.guild.id)
         return await ctx.send("Dispatched test bong.")
@@ -210,11 +208,11 @@ class BigBen(utils.Cog):
     async def before_bing_bong(self):
         await self.bot.wait_until_ready()
 
-    @utils.Cog.listener()
-    async def on_raw_reaction_add(self, payload:discord.RawReactionActionEvent):
-        """Waits for a reaction add"""
-
-        # reaction:discord.Reaction, user:discord.User
+    @vbu.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """
+        Waits for a reaction add.
+        """
 
         # Check it's on a big ben message
         if payload.message_id not in self.bong_messages:
@@ -284,9 +282,11 @@ class BigBen(utils.Cog):
         except discord.Forbidden:
             return self.logger.info(f"Can't manage roles in guild {guild.id}")
 
-    @utils.Cog.listener()
-    async def on_message(self, message:discord.Message):
-        """Listens for people saying 'bong' and reacts to it BUT only once an hour"""
+    @vbu.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """
+        Listens for people saying 'bong' and reacts to it BUT only once an hour.
+        """
 
         # Don't respond to bots
         if message.author.bot:
@@ -319,11 +319,13 @@ class BigBen(utils.Cog):
         except discord.HTTPException as e:
             self.logger.critical(f"Couldn't add reaction - {e}")
 
-    @commands.command(cls=utils.Command)
+    @vbu.command()
     @commands.bot_has_permissions(send_messages=True)
     @commands.guild_only()
-    async def bongcount(self, ctx:utils.Context, user:discord.Member=None):
-        """Counts how many times a user has gotten the first bong reaction"""
+    async def bongcount(self, ctx: vbu.Context, user: discord.Member = None):
+        """
+        Counts how many times a user has gotten the first bong reaction.
+        """
 
         user = user or ctx.author
         async with self.bot.database() as db:
@@ -333,11 +335,13 @@ class BigBen(utils.Cog):
             return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
         return await ctx.send(f"{user.mention} has gotten the first bong reaction 0 times :c")
 
-    @commands.command(cls=utils.Command)
+    @vbu.command(enabled=False)
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
-    async def leaderboard(self, ctx:utils.Context):
-        """Gives you the bong leaderboard"""
+    async def leaderboard(self, ctx: vbu.Context):
+        """
+        Gives you the bong leaderboard.
+        """
 
         async with self.bot.database() as db:
             rows = await db("SELECT user_id, count(user_id) FROM bong_log WHERE guild_id=$1 GROUP BY user_id ORDER BY count(user_id) DESC, user_id DESC", ctx.guild.id)
@@ -348,11 +352,13 @@ class BigBen(utils.Cog):
         menu = menus.MenuPages(source=source)
         await menu.start(ctx)
 
-    @commands.command(cls=utils.Command, enabled=False)
+    @vbu.command(enabled=False)
     @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
     @commands.guild_only()
-    async def bongdist(self, ctx:utils.Context, user:discord.Member=None):
-        """Gives you the bong leaderboard"""
+    async def bongdist(self, ctx: vbu.Context, user: discord.Member = None):
+        """
+        Gives you the bong leaderboard.
+        """
 
         user = user or ctx.author
         async with self.bot.database() as db:
@@ -377,13 +383,13 @@ class BigBen(utils.Cog):
 
         # Output to user baybeeee
         fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
-        with utils.Embed() as embed:
+        with vbu.Embed() as embed:
             # Build the embed
             embed = discord.Embed(title=f"{ctx.author.name}'s average reaction time")
             embed.set_image(url="attachment://activity.png")
         await ctx.send(embed=embed, file=discord.File("activity.png"))
 
 
-def setup(bot:utils.Bot):
+def setup(bot: vbu.Bot):
     x = BigBen(bot)
     bot.add_cog(x)
