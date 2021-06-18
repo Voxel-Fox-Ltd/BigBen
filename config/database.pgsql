@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS guild_settings(
     bong_channel_id BIGINT,
     bong_channel_webhook VARCHAR(150),
     bong_role_id BIGINT,
-    bong_emoji VARCHAR(50)
+    bong_emoji VARCHAR(200)
 );
 
 
