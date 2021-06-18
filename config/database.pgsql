@@ -1,4 +1,4 @@
-CREATE TABLE guild_settings(
+CREATE TABLE IF NOT EXISTS guild_settings(
     guild_id BIGINT PRIMARY KEY,
     prefix VARCHAR(30),
     bong_channel_id BIGINT,
@@ -8,12 +8,12 @@ CREATE TABLE guild_settings(
 );
 
 
-CREATE TABLE user_settings(
+CREATE TABLE IF NOT EXISTS user_settings(
     user_id BIGINT PRIMARY KEY
 );
 
 
-CREATE TABLE role_list(
+CREATE TABLE IF NOT EXISTS role_list(
     guild_id BIGINT,
     role_id BIGINT,
     key VARCHAR(50),
@@ -22,7 +22,7 @@ CREATE TABLE role_list(
 );
 
 
-CREATE TABLE channel_list(
+CREATE TABLE IF NOT EXISTS channel_list(
     guild_id BIGINT,
     channel_id BIGINT,
     key VARCHAR(50),
@@ -31,7 +31,7 @@ CREATE TABLE channel_list(
 );
 
 
-CREATE TABLE bong_log(
+CREATE TABLE IF NOT EXISTS bong_log(
     guild_id BIGINT,
     user_id BIGINT,
     timestamp TIMESTAMP,
@@ -39,7 +39,7 @@ CREATE TABLE bong_log(
 );
 
 
-CREATE TABLE bong_override_text(
+CREATE TABLE IF NOT EXISTS bong_override_text(
     guild_id BIGINT,
     date DATE,
     text VARCHAR(200),
