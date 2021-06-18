@@ -79,7 +79,7 @@ class BotSettings(vbu.Cog):
         try:
             await menu.start(ctx)
             await ctx.send("Done setting up!")
-        except vbu.errors.InvokedMetaCommand:
+        except (vbu.errors.InvokedMetaCommand, discord.HTTPException):
             pass
 
 
