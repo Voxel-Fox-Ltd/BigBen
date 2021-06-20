@@ -335,7 +335,7 @@ class BigBen(vbu.Cog):
             return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
         return await ctx.send(f"{user.mention} has gotten the first bong reaction 0 times :c")
 
-    @vbu.command()
+    @vbu.command(aliases=['lb'])
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
     async def leaderboard(self, ctx: vbu.Context):
