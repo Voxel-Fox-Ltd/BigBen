@@ -335,7 +335,7 @@ class BigBen(vbu.Cog):
             return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
         return await ctx.send(f"{user.mention} has gotten the first bong reaction 0 times :c")
 
-    @vbu.command(enabled=False)
+    @vbu.command()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
     async def leaderboard(self, ctx: vbu.Context):
@@ -344,13 +344,15 @@ class BigBen(vbu.Cog):
         """
 
         async with self.bot.database() as db:
-            rows = await db("SELECT user_id, count(user_id) FROM bong_log WHERE guild_id=$1 GROUP BY user_id ORDER BY count(user_id) DESC, user_id DESC", ctx.guild.id)
+            rows = await db(
+                """SELECT user_id, count(user_id) FROM bong_log WHERE guild_id=$1 GROUP BY user_id
+                ORDER BY count(user_id) DESC, user_id DESC""",
+                ctx.guild.id,
+            )
         if not rows:
-            return await ctx.send("Nobody has reacted to the bong message yet on your server.")
+            return await ctx.send("Nobody has reacted to the bong message yet on your server :<")
         lines = [f"{index}. <@{row['user_id']}> ({row['count']} bongs)" for index, row in enumerate(rows, start=1)]
-        source = SimpleMenuSource(lines, per_page=10)
-        menu = menus.MenuPages(source=source)
-        await menu.start(ctx)
+        await vbu.Paginator(lines, per_page=10).start(ctx)
 
     @vbu.command(enabled=False)
     @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
