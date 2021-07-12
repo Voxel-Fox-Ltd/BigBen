@@ -201,15 +201,14 @@ class BigBen(vbu.Cog):
 
         edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
         edit_url = edit_url.replace("/api/", "/api/v9/")
-        site = await self.bot.session.patch(
+        await self.bot.session.patch(
             edit_url,
             json={
                 "content": payload.message.content,
                 "components": payload.message.components.disable_components().to_dict(),
             },
         )
-        output = await site.text()
-        self.logger.info(f"Tried to disable components on message {payload.message.id} - {output}")
+        self.logger.info(f"Tried to disable components on message {payload.message.id}")
 
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
