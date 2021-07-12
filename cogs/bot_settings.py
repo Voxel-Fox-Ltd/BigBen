@@ -23,7 +23,7 @@ async def bong_channel_storage_whatever(ctx, data):
 
 settings_menu = vbu.menus.Menu(
     vbu.menus.Option(
-        display=lambda ctx: f"Set bong channel (currently {ctx.get_mentionable_channel(ctx.bot.guild_settings[ctx.guild.id]['bong_channel_id'])})",
+        display=lambda ctx: f"Set bong channel (currently {ctx.get_mentionable_channel(ctx.bot.guild_settings[ctx.guild.id]['bong_channel_id']).mention})",
         component_display="Set bong channel",
         converters=[
             vbu.menus.Converter(
@@ -35,7 +35,7 @@ settings_menu = vbu.menus.Menu(
         cache_callback=None,
     ),
     vbu.menus.Option(
-        display=lambda ctx: f"Set bong role (currently {ctx.get_mentionable_role(ctx.bot.guild_settings[ctx.guild.id]['bong_role_id'])})",
+        display=lambda ctx: f"Set bong role (currently {ctx.get_mentionable_role(ctx.bot.guild_settings[ctx.guild.id]['bong_role_id']).mention})",
         component_display="Set bong role",
         converters=[
             vbu.menus.Converter(
