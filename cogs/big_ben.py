@@ -199,13 +199,15 @@ class BigBen(vbu.Cog):
         Disable the components on a message.
         """
 
-        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'] + f"/messages/{payload.message.id}"
-        await self.bot.session.patch(
+        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
+        site = await self.bot.session.patch(
             edit_url,
             json={
                 'components': payload.message.components.disable_components().to_dict(),
             },
         )
+        output = await site.text()
+        self.logger.info(f"Tried to disable components on message {payload.message.id} - {output}")
 
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
@@ -214,7 +216,6 @@ class BigBen(vbu.Cog):
         """
 
         # See if it's a bong button
-        self.logger.info(payload.component.custom_id)
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
         async with self.bong_message_locks[payload.message.id]:
