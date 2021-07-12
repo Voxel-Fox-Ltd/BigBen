@@ -218,7 +218,7 @@ class BigBen(vbu.Cog):
         await self.bot.wait_until_ready()
 
     @vbu.Cog.listener()
-    async def on_component_interaction(self, payload: vbu.InteractionPayload):
+    async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
         """
         Waits for the bong button to be pressed
         """
@@ -229,7 +229,7 @@ class BigBen(vbu.Cog):
         async with self.bong_message_locks[payload.message.id]:
             await self.handle_bong_component(payload)
 
-    async def handle_bong_component(self, payload: vbu.InteractionPayload):
+    async def handle_bong_component(self, payload: vbu.ComponentInteractionPayload):
         """
         Handle a bong button being pressed
         """
