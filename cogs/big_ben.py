@@ -220,16 +220,16 @@ class BigBen(vbu.Cog):
         await self.bot.session.patch(edit_url, json={'components': payload.message.components.disable_components().to_dict()})
 
         # Check they gave the right reaction
-        guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
+        guild = self.bot.get_guild(payload.guild.id) or await self.bot.fetch_guild(payload.guild.id)
 
         # Database handle
-        self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
+        self.logger.info(f"Guild {guild.id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
         self.bong_messages.discard(payload.message.id)
         async with self.bot.database() as db:
             current_bong_member_rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1", guild.id)
             await db(
                 """INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)""",
-                guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message.id).created_at,
+                guild.id, payload.user.id, dt.utcnow(), discord.Object(payload.message.id).created_at,
             )
 
         # Check they have a role set up
@@ -256,7 +256,7 @@ class BigBen(vbu.Cog):
             current_bong_member = None
 
         # See who we want to give it to
-        new_bong_member = guild.get_member(payload.user_id) or await guild.fetch_member(payload.user_id)
+        new_bong_member = guild.get_member(payload.user.id) or await guild.fetch_member(payload.user.id)
 
         # See if we can remove the role from the people who have it
         try:
