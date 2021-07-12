@@ -200,12 +200,11 @@ class BigBen(vbu.Cog):
         """
 
         edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
-        self.logger.info(payload.message.components.to_dict())
-        self.logger.info(payload.message.components.disable_components().to_dict())
+        self.logger.info(edit_url)
         site = await self.bot.session.patch(
             edit_url,
             json={
-                'components': payload.message.components.disable_components().to_dict(),
+                "components": payload.message.components.disable_components().to_dict(),
             },
         )
         output = await site.text()
