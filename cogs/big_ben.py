@@ -104,7 +104,7 @@ class BigBen(vbu.Cog):
                     custom_id="BONG MESSAGE BUTTON",
                     emoji=emoji,
                     style=vbu.ButtonStyle.SECONDARY,
-                ))).to_json()
+                ))).to_dict()
 
             # Send message
             try:
