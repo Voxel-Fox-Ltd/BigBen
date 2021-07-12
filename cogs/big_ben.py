@@ -209,6 +209,7 @@ class BigBen(vbu.Cog):
         """
 
         # See if it's a bong button
+        self.logger.info(payload.component.custom_id)
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
         async with self.bong_message_locks[payload.message.id]:
