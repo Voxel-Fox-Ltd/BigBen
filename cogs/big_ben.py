@@ -194,6 +194,19 @@ class BigBen(vbu.Cog):
     async def before_bing_bong(self):
         await self.bot.wait_until_ready()
 
+    async def disable_components(self, payload: vbu.ComponentInteractionPayload):
+        """
+        Disable the components on a message.
+        """
+
+        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'] + f"/messages/{payload.message.id}"
+        await self.bot.session.patch(
+            edit_url,
+            json={
+                'components': payload.message.components.disable_components().to_dict(),
+            },
+        )
+
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
         """
@@ -214,10 +227,10 @@ class BigBen(vbu.Cog):
 
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
+            self.bot.loop.create_task(self.disable_components(payload))
             return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
-        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'] + f"/messages/{payload.message.id}"
-        await self.bot.session.patch(edit_url, json={'components': payload.message.components.disable_components().to_dict()})
+        self.bot.loop.create_task(self.disable_components(payload))
 
         # Check they gave the right reaction
         guild = self.bot.get_guild(payload.guild.id) or await self.bot.fetch_guild(payload.guild.id)
