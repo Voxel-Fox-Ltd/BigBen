@@ -115,7 +115,7 @@ class BigBen(vbu.Cog):
                 return
 
             # Cache message
-            self.bong_messages.add(message_payload['id'])
+            self.bong_messages.add(int(message_payload['id']))
             self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message_payload['id']})")
 
         except Exception as e:
