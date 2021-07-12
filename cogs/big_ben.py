@@ -216,7 +216,8 @@ class BigBen(vbu.Cog):
         if payload.message.id not in self.bong_messages:
             return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
-        await payload.message.edit(components=payload.message.components.disable_components())
+        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'] + f"/messages/{payload.message.id}"
+        await self.bot.session.patch(edit_url, json={'components': payload.message.components.disable_components().to_dict()})
 
         # Check they gave the right reaction
         guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
