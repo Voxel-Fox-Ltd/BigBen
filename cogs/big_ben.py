@@ -72,34 +72,17 @@ class BigBen(vbu.Cog):
 
             # Can we hope we have a webhook?
             payload = {}
-            if settings.get("bong_channel_webhook"):
+            if not settings.get("bong_channel_webhook"):
+                return  # Death to channel sends
 
-                # Grab webook
-                webhook_url = settings.get("bong_channel_webhook")
-                channel = discord.Webhook.from_url(webhook_url, adapter=discord.AsyncWebhookAdapter(self.bot.session))
-                payload.update({
-                    "wait": True,
-                    "username": self.bot.user.name,
-                    "avatar_url": avatar_url,
-                })
-
-            # Apparently not
-            else:
-
-                # Grab channel
-                try:
-                    channel = self.bot.get_channel(channel_id) or await self.bot.fetch_channel(channel_id)
-                except discord.HTTPException:
-                    channel = None
-                if channel is None:
-                    self.logger.info(f"Send failed - missing channel (G{guild_id}/C{channel_id})")
-                    channels_to_delete.append(guild_id)
-                    return
-
-                # see if we have permission to send messages there
-                if not channel.permissions_for(channel.guild.me).send_messages:
-                    self.logger.info(f"Send failed - no permissions (G{guild_id}/C{channel_id})")
-                    return
+            # Grab webook
+            webhook_url = settings.get("bong_channel_webhook")
+            url = webhook_url + "?wait=1"
+            payload.update({
+                "wait": True,
+                "username": self.bot.user.name,
+                "avatar_url": avatar_url,
+            })
 
             # Set up our emoji to be added
             emoji = settings['bong_emoji']
@@ -121,18 +104,18 @@ class BigBen(vbu.Cog):
                     custom_id="BONG MESSAGE BUTTON",
                     emoji=emoji,
                     style=vbu.ButtonStyle.SECONDARY,
-                )))
+                ))).to_json()
 
             # Send message
             try:
-                message = await channel.send(**payload)
+                message_payload = await self.bot.session.post(url, json=payload)
             except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                 self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
                 return
 
             # Cache message
-            self.bong_messages.add(message.id)
-            self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message.id})")
+            self.bong_messages.add(message_payload['id'])
+            self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message_payload['id']})")
 
         except Exception as e:
             self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
