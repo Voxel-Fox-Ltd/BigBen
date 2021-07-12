@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime as dt
+import re
 
 import discord
 from discord.ext import commands, tasks
@@ -9,6 +10,7 @@ from matplotlib import pyplot as plt
 
 class BigBen(vbu.Cog):
 
+    EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
     DEFAULT_BONG_TEXT = "Bong"
     BONG_TEXT = {
         (1, 1): "{0.year} Bong",
@@ -33,6 +35,7 @@ class BigBen(vbu.Cog):
         self.bing_bong.start()
         self.bong_messages = set()
         self.added_bong_reactions = set()
+        self.bong_message_locks = collections.defaultdict(asyncio.Lock)
 
     def cog_unload(self):
         self.bing_bong.cancel()
@@ -97,9 +100,27 @@ class BigBen(vbu.Cog):
                     self.logger.info(f"Send failed - no permissions (G{guild_id}/C{channel_id})")
                     return
 
+            # Set up our emoji to be added
+            emoji = settings['bong_emoji']
+            if emoji is not None:
+                if emoji.startswith("<"):
+                    match = self.EMOJI_REGEX.search(emoji)
+                    found = match.group("id")
+                    if not self.bot.get_emoji(int(found)):
+                        self.logger.info(f"Add reaction cancelled - emoji with ID {found} not found")
+                        emoji = None
+
             # See if we should get some other text
             override_text = settings.get('override_text', {}).get(f"{now.month}-{now.day}")
             payload['content'] = override_text or text
+
+            # Set up the components to be added
+            if emoji:
+                payload['components'] = vbu.MessageComponents(vbu.ActionRow(vbu.Button(
+                    custom_id="BONG MESSAGE BUTTON",
+                    emoji=emoji,
+                    style=vbu.ButtonStyle.SECONDARY,
+                )))
 
             # Send message
             try:
@@ -111,18 +132,6 @@ class BigBen(vbu.Cog):
             # Cache message
             self.bong_messages.add(message.id)
             self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message.id})")
-
-            # Set up our emoji to be added
-            emoji = settings['bong_emoji']
-            if emoji is not None:
-                if message.channel is not None and message.channel.permissions_for(message.guild.me).add_reactions is False:
-                    self.logger.info(f"Add reaction failed - no permissions (G{guild_id}/C{channel_id}/M{message.id})")
-                    return
-                try:
-                    await self.bot.http.add_reaction(channel_id, message.id, emoji.strip('<>'))
-                    self.logger.info(f"Added reaction to bong message (G{guild_id}/C{channel_id}/M{message.id})")
-                except Exception as e:
-                    self.logger.info(f"Add reaction failed - {e} (G{guild_id}/C{channel_id}/M{message.id})")
 
         except Exception as e:
             self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
@@ -209,26 +218,30 @@ class BigBen(vbu.Cog):
         await self.bot.wait_until_ready()
 
     @vbu.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+    async def on_component_interaction(self, payload: vbu.InteractionPayload):
         """
-        Waits for a reaction add.
+        Waits for the bong button to be pressed
         """
 
-        # Check it's on a big ben message
-        if payload.message_id not in self.bong_messages:
+        # See if it's a bong button
+        if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
+        async with self.bong_message_locks[payload.message.id]:
+            await self.handle_bong_component(payload)
+
+    async def handle_bong_component(self, payload: vbu.InteractionPayload):
+        """
+        Handle a bong button being pressed
+        """
+
+        # Check that it wasn't already reacted to
+        if payload.message_id not in self.bong_messages:
+            return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+        await payload.update_message(content=payload.message.content, components=payload.message.components.disable_components())
+        await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
 
         # Check they gave the right reaction
-        emoji = self.bot.guild_settings[payload.guild_id]['bong_emoji']
-        if emoji and str(payload.emoji) != emoji:
-            return
         guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
-
-        # Check it's not a bot
-        if payload.user_id == self.bot.user.id:
-            return
-        if (self.bot.get_user(payload.user_id) or await self.bot.fetch_user(payload.user_id)).bot:
-            return
 
         # Database handle
         self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message_id).created_at}")
@@ -236,7 +249,7 @@ class BigBen(vbu.Cog):
         async with self.bot.database() as db:
             current_bong_member_rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1", guild.id)
             await db(
-                "INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)",
+                """INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)""",
                 guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message_id).created_at,
             )
 
