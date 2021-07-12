@@ -146,7 +146,6 @@ class BigBen(vbu.Cog):
 
         # Set up what we need to wait for
         tasks_to_gather = []
-        tasks_to_await = []
 
         # Let's see our cached guilds
         for guild_id, settings in self.bot.guild_settings.copy().items():
@@ -168,16 +167,9 @@ class BigBen(vbu.Cog):
                 tasks_to_gather.append(self.send_guild_bong_message(
                     text, now, guild_id, settings, channels_to_delete,
                 ))
-            else:
-                tasks_to_await.append(self.send_guild_bong_message(
-                    text, now, guild_id, settings, channels_to_delete,
-                ))
 
         # Gather all of our data
-        webhook_sent = self.bot.loop.create_task(asyncio.gather(*tasks_to_gather))
-        for i in tasks_to_await:
-            await i
-        asyncio.wait_for(webhook_sent, timeout=None)
+        await asyncio.gather(*tasks_to_gather)
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
