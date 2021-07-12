@@ -108,7 +108,8 @@ class BigBen(vbu.Cog):
 
             # Send message
             try:
-                message_payload = await self.bot.session.post(url, json=payload)
+                site = await self.bot.session.post(url, json=payload)
+                message_payload = await site.json()
             except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                 self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
                 return
