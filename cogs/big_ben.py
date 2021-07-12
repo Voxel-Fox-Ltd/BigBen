@@ -221,7 +221,7 @@ class BigBen(vbu.Cog):
         """
 
         # Check that it wasn't already reacted to
-        if payload.message_id not in self.bong_messages:
+        if payload.message.id not in self.bong_messages:
             return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
         await payload.update_message(content=payload.message.content, components=payload.message.components.disable_components())
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
@@ -230,13 +230,13 @@ class BigBen(vbu.Cog):
         guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
 
         # Database handle
-        self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message_id).created_at}")
-        self.bong_messages.discard(payload.message_id)
+        self.logger.info(f"Guild {guild.id} with user {payload.user_id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
+        self.bong_messages.discard(payload.message.id)
         async with self.bot.database() as db:
             current_bong_member_rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1", guild.id)
             await db(
                 """INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)""",
-                guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message_id).created_at,
+                guild.id, payload.user_id, dt.utcnow(), discord.Object(payload.message.id).created_at,
             )
 
         # Check they have a role set up
