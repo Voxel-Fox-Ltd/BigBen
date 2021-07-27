@@ -219,8 +219,14 @@ class BigBen(vbu.Cog):
         # See if it's a bong button
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
-        async with self.bong_message_locks[payload.message.id]:
+        lock = self.bong_message_locks[payload.message.id]
+        try:
+            await asyncio.wait_for(lock.acquire(), timeout=1)
+        except asyncio.TimeoutError:
+            return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+        else:
             await self.handle_bong_component(payload)
+            lock.release()
 
     async def handle_bong_component(self, payload: vbu.ComponentInteractionPayload):
         """
