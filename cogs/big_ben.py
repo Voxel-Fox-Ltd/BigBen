@@ -327,7 +327,7 @@ class BigBen(vbu.Cog):
 
         # Get the bong role
         try:
-            bong_role = guild.get_role(role_id) or [i for i in await guild.fetch_roles() if i.id == role_id][0]
+            bong_role = guild.get_role(role_id)
         except (IndexError, discord.HTTPException):
             bong_role = None
         if bong_role is None:
