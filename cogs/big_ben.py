@@ -242,14 +242,15 @@ class BigBen(vbu.Cog):
         # Edit the message
         edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
         edit_url = edit_url.replace("/api/", "/api/v9/")
-        await self.bot.session.patch(
+        r = await self.bot.session.patch(
             edit_url,
             json={
                 "content": payload.message.content,
                 "components": components.to_dict(),
             },
         )
-        self.logger.info(f"Tried to update components on message {payload.message.id}")
+        d = await r.text()
+        self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status} {d}")
 
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
