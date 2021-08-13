@@ -291,6 +291,9 @@ class BigBen(vbu.Cog):
             await self.handle_bong_component(payload)
             lock.release()
 
+        # And update the bong message
+        await self.update_components(payload)
+
     async def handle_bong_component(self, payload: vbu.ComponentInteractionPayload):
         """
         Handle a bong button being pressed
@@ -298,7 +301,10 @@ class BigBen(vbu.Cog):
 
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
-            return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+            if payload.user.id in self.bong_message_clicks[payload.message.id]:
+                return await payload.send("You've already clicked this bong button!", wait=False, ephemeral=True)
+            else:
+                return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
 
         # Check they gave the right reaction
