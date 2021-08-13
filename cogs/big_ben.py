@@ -306,10 +306,7 @@ class BigBen(vbu.Cog):
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
             try:
-                if payload.user.id in self.bong_button_clicks[payload.message.id]:
-                    await payload.send("You've already clicked this bong button!", wait=False, ephemeral=True)
-                else:
-                    await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+                await payload.send("This button has already been clicked :<", wait=False, ephemeral=True)
             except discord.NotFound:
                 pass
             return
