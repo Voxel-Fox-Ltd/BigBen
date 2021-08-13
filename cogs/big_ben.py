@@ -246,7 +246,7 @@ class BigBen(vbu.Cog):
             edit_url,
             json={
                 "content": payload.message.content,
-                "components": components,
+                "components": components.to_dict(),
             },
         )
         self.logger.info(f"Tried to update components on message {payload.message.id}")
