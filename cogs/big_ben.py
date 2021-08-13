@@ -284,7 +284,11 @@ class BigBen(vbu.Cog):
 
         # Can't get the lock, tell them they weren't first
         except asyncio.TimeoutError:
-            return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+            try:
+                await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+            except discord.NotFound:
+                pass
+            return
 
         # We got the lock! Let's go gamer
         else:
@@ -301,10 +305,14 @@ class BigBen(vbu.Cog):
 
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
-            if payload.user.id in self.bong_button_clicks[payload.message.id]:
-                return await payload.send("You've already clicked this bong button!", wait=False, ephemeral=True)
-            else:
-                return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+            try:
+                if payload.user.id in self.bong_button_clicks[payload.message.id]:
+                    await payload.send("You've already clicked this bong button!", wait=False, ephemeral=True)
+                else:
+                    await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+            except discord.NotFound:
+                pass
+            return
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
 
         # Check they gave the right reaction
