@@ -289,7 +289,6 @@ class BigBen(vbu.Cog):
                 await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
             except discord.NotFound:
                 pass
-            return
 
         # We got the lock! Let's go gamer
         else:
