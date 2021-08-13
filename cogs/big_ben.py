@@ -32,11 +32,13 @@ class BigBen(vbu.Cog):
 
     def __init__(self, bot: vbu.Bot):
         super().__init__(bot)
-        self.last_posted_hour: int = None
-        self.bing_bong.start()
-        self.bong_messages = set()
-        self.added_bong_reactions = set()
-        self.bong_message_locks = collections.defaultdict(asyncio.Lock)
+        self.last_posted_hour: int = None  # The last hour of bongs that was posted
+        self.bing_bong.start()  # The bong loop
+        self.bong_messages = set()  # Messages that the bot posted
+        self.added_bong_reactions = set()  # Users who said bong that we already reacted to
+        self.bong_message_locks = collections.defaultdict(asyncio.Lock)  # A lock instance so we don't handle the same bong twice
+        self.bong_button_clicks = collections.defaultdict(set)  # A dict of `message: {user_id, ...}` to count how many clicks the button has
+        self.first_button_click = {}  # A dict of message_id: username for the first people to click the bong button
 
     def cog_unload(self):
         self.bing_bong.cancel()
@@ -210,6 +212,45 @@ class BigBen(vbu.Cog):
         )
         self.logger.info(f"Tried to disable components on message {payload.message.id}")
 
+    async def update_components(self, payload: vbu.ComponentInteractionPayload):
+        """
+        Update the components on a message to show the user click count.
+        """
+
+        # Get the current components
+        components = payload.message.components
+
+        # Add the "first clicked by" button
+        if len(components.components[0].components) == 1:
+            username = self.first_button_click.get(payload.message.id)
+            if username:
+                components.components[0].add_component(vbu.Button(
+                    label=username,
+                    custom_id="BONG MESSAGE FIRST CLICKED",
+                    disabled=True,
+                    style=vbu.ButtonStyle.SECONDARY
+                ))
+
+        # Update the bong button
+        bong_button = components.get_component("BONG MESSAGE BUTTON")
+        button_clicks = len(self.bong_button_clicks[payload.message.id])
+        if button_clicks > 1:
+            bong_button.label = f"{button_clicks} clicks"
+        else:
+            bong_button.label = f"{button_clicks} click"
+
+        # Edit the message
+        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
+        edit_url = edit_url.replace("/api/", "/api/v9/")
+        await self.bot.session.patch(
+            edit_url,
+            json={
+                "content": payload.message.content,
+                "components": components,
+            },
+        )
+        self.logger.info(f"Tried to update components on message {payload.message.id}")
+
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
         """
@@ -219,11 +260,33 @@ class BigBen(vbu.Cog):
         # See if it's a bong button
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
+
+        # Check that it occured on this hour
+        message_timestamp = payload.message.created_at
+        message_time_serial = (message_timestamp.year, message_timestamp.month, message_timestamp.day, message_timestamp.hour)
+        now = dt.utcnow()
+        now_serial = (now.year, now.month, now.day, now.hour)
+        if message_time_serial != now_serial:
+            return await payload.send("You can't click a bong button from the past :<", wait=False, ephemeral=True)
+
+        # Say that the user has clicked the button
+        self.bong_button_clicks[payload.message.id].add(payload.user.id)
+        self.first_button_click.setdefault(payload.message.id, str(payload.user))
+
+        # Grab a lock for it
         lock = self.bong_message_locks[payload.message.id]
+
+        # Try and get the lock
         try:
-            await asyncio.wait_for(lock.acquire(), timeout=1)
+            if lock.locked():
+                raise asyncio.TimeoutError()
+            await asyncio.wait_for(lock.acquire(), timeout=0.5)
+
+        # Can't get the lock, tell them they weren't first
         except asyncio.TimeoutError:
             return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+
+        # We got the lock! Let's go gamer
         else:
             await self.handle_bong_component(payload)
             lock.release()
@@ -235,10 +298,8 @@ class BigBen(vbu.Cog):
 
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
-            self.bot.loop.create_task(self.disable_components(payload))
             return await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
         await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
-        self.bot.loop.create_task(self.disable_components(payload))
 
         # Check they gave the right reaction
         guild = self.bot.get_guild(payload.guild.id) or await self.bot.fetch_guild(payload.guild.id)
@@ -283,11 +344,12 @@ class BigBen(vbu.Cog):
         try:
 
             # See if we need to remove it from them
-            if current_bong_member is not None and current_bong_member.id != new_bong_member.id:
-                await current_bong_member.remove_roles(bong_role)
-                self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{current_bong_member.id})")
+            for i in bong_role.members + [current_bong_member]:
+                if i is not None and i.id != new_bong_member.id:
+                    await i.remove_roles(bong_role)
+                    self.logger.info(f"Removed bong role ({bong_role.id}) from member (G{guild.id}/U{i.id})")
 
-            # Add the role to them
+            # Add the role to the new person
             await new_bong_member.add_roles(bong_role)
             self.logger.info(f"Added bong role ({bong_role.id}) to member (G{guild.id}/U{new_bong_member.id})")
 

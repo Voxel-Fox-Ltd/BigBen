@@ -25,7 +25,7 @@ owners_ignore_check_failures = true  # Whether or not owners ignore check failur
 # The intents that the bot should start with
 [intents]
     guilds = true  # Guilds - Used for guild join/remove, channel create/delete/update, Bot.get_channel, Bot.guilds, Bot.get_guild.
-    members = false  # Members (privileged intent) - Used for member join/remove/update, Member.roles, Member.nick, User.name, Bot.get_user, Guild.get_member etc.
+    members = true  # Members (privileged intent) - Used for member join/remove/update, Member.roles, Member.nick, User.name, Bot.get_user, Guild.get_member etc.
     bans = false  # Bans - Used for member ban/unban.
     emojis = false  # Emojis - Used for guild emojis update, Bot.get_emoji, Guild.emojis.
     integrations = false  # Integrations - Used for guild integrations update.
