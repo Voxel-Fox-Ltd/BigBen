@@ -290,7 +290,7 @@ class BigBen(vbu.Cog):
         # See if it's a bong button
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
-        await payload.defer(ephemeral=True)
+        self.bot.create_task(payload.defer(ephemeral=True))
 
         # Check that it occured on this hour
         message_timestamp = payload.message.created_at
