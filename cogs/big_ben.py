@@ -371,6 +371,8 @@ class BigBen(vbu.Cog):
         # Oh well
         except discord.Forbidden:
             return self.logger.info(f"Can't manage roles in guild {guild.id}")
+        except discord.NotFound:
+            return self.logger.info(f"Role G{guild.id}/R{role_id} doesn't exist")
 
     @vbu.Cog.listener()
     async def on_message(self, message: discord.Message):
