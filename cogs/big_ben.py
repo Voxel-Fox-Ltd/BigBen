@@ -311,7 +311,10 @@ class BigBen(vbu.Cog):
             except discord.NotFound:
                 pass
             return
-        await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
+        try:
+            await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
+        except discord.NotFound:
+            pass
 
         # Check they gave the right reaction
         guild = self.bot.get_guild(payload.guild.id) or await self.bot.fetch_guild(payload.guild.id)
