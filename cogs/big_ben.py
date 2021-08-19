@@ -192,6 +192,34 @@ class BigBen(vbu.Cog):
         self.bot.dispatch("bong", ctx.guild.id)
         return await ctx.send("Dispatched test bong.")
 
+    @vbu.command(hidden=True)
+    @commands.is_owner()
+    async def savesets(self, ctx: vbu.Context):
+        """
+        Update bong cache.
+        """
+
+        self.bot.bong_cache = {
+            "bong_messages": self.bong_messages.copy(),
+            "added_bong_reactions": self.added_bong_reactions.copy(),
+            "bong_button_clicks": self.bong_button_clicks.copy(),
+            "first_button_click": self.first_button_click.copy(),
+        }
+        await ctx.send("Done.", wait=False)
+
+    @vbu.command(hidden=True)
+    @commands.is_owner()
+    async def loadsets(self, ctx: vbu.Context):
+        """
+        Update bong cache.
+        """
+
+        self.bong_messages = self.bot.bong_cache["bong_messages"]
+        self.added_bong_reactions = self.bot.bong_cache["added_bong_reactions"]
+        self.bong_button_clicks = self.bot.bong_cache["bong_button_clicks"]
+        self.first_button_click = self.bot.bong_cache["first_button_click"]
+        await ctx.send("Done.", wait=False)
+
     @bing_bong.before_loop
     async def before_bing_bong(self):
         await self.bot.wait_until_ready()
