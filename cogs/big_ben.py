@@ -249,8 +249,9 @@ class BigBen(vbu.Cog):
                 "components": components.to_dict(),
             },
         )
-        d = await r.text()
-        self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status} {d}")
+        # d = await r.text()
+        self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status}")
+        # self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status} {d}")
 
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
