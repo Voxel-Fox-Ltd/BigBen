@@ -269,7 +269,10 @@ class BigBen(vbu.Cog):
         now = dt.utcnow()
         now_serial = (now.year, now.month, now.day, now.hour)
         if message_time_serial != now_serial:
-            return await payload.send("You can't click a bong button from the past :<", wait=False, ephemeral=True)
+            await payload.send("You can't click a bong button from the past :<", wait=False, ephemeral=True)
+            if payload.message.id in self.bong_button_clicks and payload.message.id in self.first_button_click:
+                await self.update_components(payload)
+            return
 
         # Say that the user has clicked the button
         self.bong_button_clicks[payload.message.id].add(payload.user.id)
