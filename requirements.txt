@@ -1,2 +1,2 @@
-voxelbotutils>=0.4,<1.0
+voxelbotutils>=0.5.10,<0.6
 matplotlib

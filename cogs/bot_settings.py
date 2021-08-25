@@ -62,4 +62,5 @@ settings_menu = vbu.menus.Menu(
 
 
 def setup(bot: vbu.Bot):
-    bot.add_cog(settings_menu.create_cog(bot))
+    x = settings_menu.create_cog(bot, permissions=["manage_guild"])
+    bot.add_cog(x)
