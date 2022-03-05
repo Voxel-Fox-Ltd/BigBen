@@ -305,7 +305,10 @@ class BigBen(vbu.Cog):
 
         # We got the lock! Let's go gamer
         else:
-            await self.handle_bong_component(payload)
+            try:
+                await self.handle_bong_component(payload)
+            except:
+                pass
             lock.release()
 
         # And update the bong message
