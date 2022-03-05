@@ -174,9 +174,10 @@ class BigBen(vbu.Cog):
             if bong_guild_id is not None and bong_guild_id != guild_id:
                 continue
 
-            # See if we want to handle this guild, or if that's up to another process
-            if self.bot.shard_count and (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
-                continue
+            # # See if we want to handle this guild, or if that's up to another process
+            # We now handle all processes
+            # if self.bot.shard_count and (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
+            #     continue
 
             # # See if we're still in that guild
             # There's no easy way to do this if we don't connect to the gateway, and I don't
