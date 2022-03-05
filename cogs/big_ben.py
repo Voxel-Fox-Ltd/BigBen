@@ -244,11 +244,11 @@ class BigBen(vbu.Cog):
         if len(components.components[0].components) == 1:
             username = self.first_button_click.get(payload.message.id)
             if username:
-                components.components[0].add_component(vbu.Button(
+                components.components[0].add_component(discord.ui.Button(
                     label=username,
                     custom_id="BONG MESSAGE FIRST CLICKED",
                     disabled=True,
-                    style=vbu.ButtonStyle.SECONDARY
+                    style=discord.ButtonStyle.secondary
                 ))
 
         # Update the bong button
