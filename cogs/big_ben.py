@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime as dt
 import re
 import collections
+from typing import Dict, Union, Tuple
 
 import discord
 from discord.ext import commands, tasks
@@ -13,7 +14,7 @@ class BigBen(vbu.Cog):
 
     EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
     DEFAULT_BONG_TEXT = "Bong"
-    BONG_TEXT = {
+    BONG_TEXT: Dict[Union[Tuple[int, int], Tuple[int, int, int]], str] = {
         (1, 1): "{0.year} Bong",
         (14, 2): "Valentine's Bong",
         (1, 4): "Bing",
@@ -57,7 +58,13 @@ class BigBen(vbu.Cog):
             return
         self.bot.dispatch("bong")
 
-    async def send_guild_bong_message(self, text: str, now: dt, guild_id: int, settings: dict, channels_to_delete: list):
+    async def send_guild_bong_message(
+            self,
+            text: str,
+            now: dt,
+            guild_id: int,
+            settings: dict,
+            channels_to_delete: set):
         """
         An async function that does the actual sending of the bong message.
         """
@@ -79,6 +86,8 @@ class BigBen(vbu.Cog):
 
             # Grab webook
             webhook_url = settings.get("bong_channel_webhook")
+            if not webhook_url:
+                return
             url = webhook_url + "?wait=1"
             payload.update({
                 "wait": True,
@@ -91,6 +100,7 @@ class BigBen(vbu.Cog):
             if emoji is not None:
                 if emoji.startswith("<"):
                     match = self.EMOJI_REGEX.search(emoji)
+                    assert match
                     found = match.group("id")
                     if not self.bot.get_emoji(int(found)):
                         self.logger.info(f"Add reaction cancelled - emoji with ID {found} not found")
@@ -102,17 +112,25 @@ class BigBen(vbu.Cog):
 
             # Set up the components to be added
             if emoji:
-                payload['components'] = vbu.MessageComponents(vbu.ActionRow(vbu.Button(
-                    custom_id="BONG MESSAGE BUTTON",
-                    emoji=emoji,
-                    style=vbu.ButtonStyle.SECONDARY,
-                ))).to_dict()
+                payload['components'] = discord.ui.MessageComponents(
+                    discord.ui.ActionRow(
+                        discord.ui.Button(
+                            custom_id="BONG MESSAGE BUTTON",
+                            emoji=emoji,
+                            style=discord.ButtonStyle.secondary,
+                        )
+                    )
+                ).to_dict()
 
             # Send message
             try:
                 site = await self.bot.session.post(url, json=payload)
                 message_payload = await site.json()
             except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
+                # try:
+                #     channels_to_delete.add(guild_id)
+                # except:
+                #     pass
                 self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
                 return
 
@@ -141,7 +159,7 @@ class BigBen(vbu.Cog):
         self.logger.info(f"Sending bong message text '{text}'")
 
         # Clear caches
-        channels_to_delete = []
+        channels_to_delete = set()
         if bong_guild_id is None:
             self.bong_messages.clear()  # Clear for the reacted to bong first role
             self.added_bong_reactions.clear()  # Clear for the adding "bong" to people's messages
@@ -157,12 +175,14 @@ class BigBen(vbu.Cog):
                 continue
 
             # See if we want to handle this guild, or if that's up to another process
-            if (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
+            if self.bot.shard_count and (guild_id >> 22) % self.bot.shard_count not in self.bot.shard_ids:
                 continue
 
-            # See if we're still in that guild
-            if self.bot.get_guild(guild_id) is None:
-                continue
+            # # See if we're still in that guild
+            # There's no easy way to do this if we don't connect to the gateway, and I don't
+            # want to do that.
+            # if self.bot.get_guild(guild_id) is None:
+            #     continue
 
             # See if they have a webhook
             if settings.get("bong_channel_webhook"):
@@ -178,11 +198,17 @@ class BigBen(vbu.Cog):
 
         # Delete channels that we should no longer care about
         async with self.bot.database() as db:
-            await db("UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])", channels_to_delete)
+            await db(
+                "UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])",
+                list(channels_to_delete),
+            )
         for guild_id in channels_to_delete:
             self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
-    @vbu.command(hidden=True)
+    @commands.command(
+        application_command_meta=commands.ApplicationCommandMeta()
+    )
+    @commands.defer()
     @commands.has_permissions(manage_guild=True)
     async def testbong(self, ctx: vbu.Context):
         """
@@ -192,55 +218,21 @@ class BigBen(vbu.Cog):
         self.bot.dispatch("bong", ctx.guild.id)
         return await ctx.send("Dispatched test bong.")
 
-    @vbu.command(hidden=True)
-    @commands.is_owner()
-    async def savesets(self, ctx: vbu.Context):
-        """
-        Update bong cache.
-        """
-
-        self.bot.bong_cache = {
-            "bong_messages": self.bong_messages.copy(),
-            "added_bong_reactions": self.added_bong_reactions.copy(),
-            "bong_button_clicks": self.bong_button_clicks.copy(),
-            "first_button_click": self.first_button_click.copy(),
-        }
-        await ctx.send("Done.", wait=False)
-
-    @vbu.command(hidden=True)
-    @commands.is_owner()
-    async def loadsets(self, ctx: vbu.Context):
-        """
-        Update bong cache.
-        """
-
-        self.bong_messages = self.bot.bong_cache["bong_messages"]
-        self.added_bong_reactions = self.bot.bong_cache["added_bong_reactions"]
-        self.bong_button_clicks = self.bot.bong_cache["bong_button_clicks"]
-        self.first_button_click = self.bot.bong_cache["first_button_click"]
-        await ctx.send("Done.", wait=False)
-
-    @bing_bong.before_loop
-    async def before_bing_bong(self):
-        await self.bot.wait_until_ready()
-
-    async def disable_components(self, payload: vbu.ComponentInteractionPayload):
+    async def disable_components(self, payload: discord.Interaction):
         """
         Disable the components on a message.
         """
 
         edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
-        edit_url = edit_url.replace("/api/", "/api/v9/")
         await self.bot.session.patch(
             edit_url,
             json={
-                "content": payload.message.content,
                 "components": payload.message.components.disable_components().to_dict(),
             },
         )
         self.logger.info(f"Tried to disable components on message {payload.message.id}")
 
-    async def update_components(self, payload: vbu.ComponentInteractionPayload):
+    async def update_components(self, payload: discord.Interaction):
         """
         Update the components on a message to show the user click count.
         """
@@ -269,20 +261,16 @@ class BigBen(vbu.Cog):
 
         # Edit the message
         edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
-        edit_url = edit_url.replace("/api/", "/api/v9/")
         r = await self.bot.session.patch(
             edit_url,
             json={
-                "content": payload.message.content,
                 "components": components.to_dict(),
             },
         )
-        # d = await r.text()
         self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status}")
-        # self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status} {d}")
 
     @vbu.Cog.listener()
-    async def on_component_interaction(self, payload: vbu.ComponentInteractionPayload):
+    async def on_component_interaction(self, payload: discord.Interaction):
         """
         Waits for the bong button to be pressed
         """
@@ -290,7 +278,6 @@ class BigBen(vbu.Cog):
         # See if it's a bong button
         if payload.component.custom_id != "BONG MESSAGE BUTTON":
             return
-        # self.bot.loop.create_task(payload.defer(ephemeral=True))
 
         # Check that it occured on this hour
         message_timestamp = payload.message.created_at
@@ -298,7 +285,7 @@ class BigBen(vbu.Cog):
         now = dt.utcnow()
         now_serial = (now.year, now.month, now.day, now.hour)
         if message_time_serial != now_serial:
-            await payload.send("You can't click a bong button from the past :<", wait=False, ephemeral=True)
+            await payload.response.send_message("You can't click a bong button from the past :<", ephemeral=True)
             if payload.message.id in self.bong_button_clicks and payload.message.id in self.first_button_click:
                 await self.update_components(payload)
             return
@@ -319,7 +306,7 @@ class BigBen(vbu.Cog):
         # Can't get the lock, tell them they weren't first
         except asyncio.TimeoutError:
             try:
-                await payload.send("You weren't the first person to click the button :c", wait=False, ephemeral=True)
+                await payload.response.send_message("You weren't the first person to click the button :c", ephemeral=True)
             except discord.NotFound:
                 pass
 
@@ -331,7 +318,7 @@ class BigBen(vbu.Cog):
         # And update the bong message
         await self.update_components(payload)
 
-    async def handle_bong_component(self, payload: vbu.ComponentInteractionPayload):
+    async def handle_bong_component(self, payload: discord.Interaction):
         """
         Handle a bong button being pressed
         """
@@ -339,12 +326,12 @@ class BigBen(vbu.Cog):
         # Check that it wasn't already reacted to
         if payload.message.id not in self.bong_messages:
             try:
-                await payload.send("This button has already been clicked :<", wait=False, ephemeral=True)
+                await payload.response.send_message("This button has already been clicked :<", ephemeral=True)
             except discord.NotFound:
                 pass
             return
         try:
-            await payload.send("You were the first to react! :D", wait=False, ephemeral=True)
+            await payload.response.send_message("You were the first to react! :D", ephemeral=True)
         except discord.NotFound:
             pass
 
@@ -406,44 +393,56 @@ class BigBen(vbu.Cog):
         except discord.NotFound:
             return self.logger.info(f"Role G{guild.id}/R{role_id} doesn't exist")
 
-    @vbu.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        """
-        Listens for people saying 'bong' and reacts to it BUT only once an hour.
-        """
+    # @vbu.Cog.listener()
+    # async def on_message(self, message: discord.Message):
+    #     """
+    #     Listens for people saying 'bong' and reacts to it BUT only once an hour.
+    #     """
 
-        # Don't respond to bots
-        if message.author.bot:
-            return
+    #     # Don't respond to bots
+    #     if message.author.bot:
+    #         return
 
-        # Don't respond in DMs
-        if isinstance(message.channel, discord.DMChannel):
-            return
+    #     # Don't respond in DMs
+    #     if isinstance(message.channel, discord.DMChannel):
+    #         return
 
-        # Don't respond if they already got a reaction
-        if (message.guild.id, message.author.id) in self.added_bong_reactions:
-            return
+    #     # Don't respond if they already got a reaction
+    #     if (message.guild.id, message.author.id) in self.added_bong_reactions:
+    #         return
 
-        # Check valid string
-        valid_strings = [self.DEFAULT_BONG_TEXT.lower(), 'early ' + self.DEFAULT_BONG_TEXT.lower(), 'late ' + self.DEFAULT_BONG_TEXT.lower()]
-        if message.content.lower().strip(' .,;?!') not in valid_strings:
-            return
+    #     # Check valid string
+    #     valid_strings = [self.DEFAULT_BONG_TEXT.lower(), 'early ' + self.DEFAULT_BONG_TEXT.lower(), 'late ' + self.DEFAULT_BONG_TEXT.lower()]
+    #     if message.content.lower().strip(' .,;?!') not in valid_strings:
+    #         return
 
-        # Add reaction
-        try:
-            if dt.utcnow().minute > 45:
-                await message.add_reaction("<:EarlyBong:699703641560449065>")
-            elif dt.utcnow().minute > 15:
-                await message.add_reaction("<:LateBong:699701882255311031>")
-            else:
-                await message.add_reaction("<:Bong:699705094253576222>")
-            self.added_bong_reactions.add((message.guild.id, message.author.id))
-        except (discord.Forbidden, discord.NotFound) as e:
-            self.logger.info(f"Couldn't react to message {message.id} - {e}")
-        except discord.HTTPException as e:
-            self.logger.critical(f"Couldn't add reaction - {e}")
+    #     # Add reaction
+    #     try:
+    #         if dt.utcnow().minute > 45:
+    #             await message.add_reaction("<:EarlyBong:699703641560449065>")
+    #         elif dt.utcnow().minute > 15:
+    #             await message.add_reaction("<:LateBong:699701882255311031>")
+    #         else:
+    #             await message.add_reaction("<:Bong:699705094253576222>")
+    #         self.added_bong_reactions.add((message.guild.id, message.author.id))
+    #     except (discord.Forbidden, discord.NotFound) as e:
+    #         self.logger.info(f"Couldn't react to message {message.id} - {e}")
+    #     except discord.HTTPException as e:
+    #         self.logger.critical(f"Couldn't add reaction - {e}")
 
-    @vbu.command()
+    @commands.command(
+        application_command_meta=commands.ApplicationCommandMeta(
+            options=[
+                discord.ApplicationCommandOption(
+                    name="user",
+                    description="The user whose bong count you want to check.",
+                    required=False,
+                    type=discord.ApplicationCommandOptionType.user,
+                )
+            ]
+        )
+    )
+    @commands.defer()
     @commands.bot_has_permissions(send_messages=True)
     @commands.guild_only()
     async def bongcount(self, ctx: vbu.Context, user: discord.Member = None):
@@ -459,7 +458,11 @@ class BigBen(vbu.Cog):
             return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
         return await ctx.send(f"{user.mention} has gotten the first bong reaction 0 times :c")
 
-    @vbu.command(aliases=['lb'])
+    @commands.command(
+        aliases=['lb'],
+        application_command_meta=commands.ApplicationCommandMeta(),
+    )
+    @commands.defer()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
     async def leaderboard(self, ctx: vbu.Context):
@@ -478,42 +481,42 @@ class BigBen(vbu.Cog):
         lines = [f"{index}. <@{row['user_id']}> ({row['count']} bongs)" for index, row in enumerate(rows, start=1)]
         await vbu.Paginator(lines, per_page=10).start(ctx)
 
-    @vbu.command(enabled=False)
-    @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
-    @commands.guild_only()
-    async def bongdist(self, ctx: vbu.Context, user: discord.Member = None):
-        """
-        Gives you the bong leaderboard.
-        """
+    # @commands.command(enabled=False)
+    # @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
+    # @commands.guild_only()
+    # async def bongdist(self, ctx: vbu.Context, user: discord.Member = None):
+    #     """
+    #     Gives you the bong leaderboard.
+    #     """
 
-        user = user or ctx.author
-        async with self.bot.database() as db:
-            rows = await db("SELECT timestamp - message_timestamp AS reaction_time FROM bong_log WHERE user_id=$1 AND guild_id=$2", user.id, ctx.guild.id)
-        if not rows:
-            return await ctx.send(f"{user.mention} has reacted to the bong message yet on your server.")
+    #     user = user or ctx.author
+    #     async with self.bot.database() as db:
+    #         rows = await db("SELECT timestamp - message_timestamp AS reaction_time FROM bong_log WHERE user_id=$1 AND guild_id=$2", user.id, ctx.guild.id)
+    #     if not rows:
+    #         return await ctx.send(f"{user.mention} has reacted to the bong message yet on your server.")
 
-        # Build our output graph
-        fig = plt.figure()
-        ax = fig.subplots()
-        bplot = ax.boxplot([i['reaction_time'].total_seconds() for i in rows], patch_artist=True)
-        ax.axis([0, 2, 0, 10])
+    #     # Build our output graph
+    #     fig = plt.figure()
+    #     ax = fig.subplots()
+    #     bplot = ax.boxplot([i['reaction_time'].total_seconds() for i in rows], patch_artist=True)
+    #     ax.axis([0, 2, 0, 10])
 
-        for i in bplot['boxes']:
-            i.set_facecolor('lightblue')
+    #     for i in bplot['boxes']:
+    #         i.set_facecolor('lightblue')
 
-        # Fix axies
-        ax.grid(True)
+    #     # Fix axies
+    #     ax.grid(True)
 
-        # Tighten border
-        fig.tight_layout()
+    #     # Tighten border
+    #     fig.tight_layout()
 
-        # Output to user baybeeee
-        fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
-        with vbu.Embed() as embed:
-            # Build the embed
-            embed = discord.Embed(title=f"{ctx.author.name}'s average reaction time")
-            embed.set_image(url="attachment://activity.png")
-        await ctx.send(embed=embed, file=discord.File("activity.png"))
+    #     # Output to user baybeeee
+    #     fig.savefig('activity.png', bbox_inches='tight', pad_inches=0)
+    #     with vbu.Embed() as embed:
+    #         # Build the embed
+    #         embed = discord.Embed(title=f"{ctx.author.name}'s average reaction time")
+    #         embed.set_image(url="attachment://activity.png")
+    #     await ctx.send(embed=embed, file=discord.File("activity.png"))
 
 
 def setup(bot: vbu.Bot):
