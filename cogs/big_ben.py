@@ -209,7 +209,7 @@ class BigBen(vbu.Cog):
         application_command_meta=commands.ApplicationCommandMeta()
     )
     @commands.defer()
-    @commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def testbong(self, ctx: vbu.Context):
         """
         Send a test bong.
