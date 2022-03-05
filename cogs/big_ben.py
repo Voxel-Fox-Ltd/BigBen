@@ -329,7 +329,7 @@ class BigBen(vbu.Cog):
             pass
 
         # Check they gave the right reaction
-        guild = self.bot.get_guild(payload.guild.id) or await self.bot.fetch_guild(payload.guild.id)
+        guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
 
         # Database handle
         self.logger.info(f"Guild {guild.id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
