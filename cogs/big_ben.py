@@ -210,12 +210,12 @@ class BigBen(vbu.Cog):
     )
     @commands.defer()
     # @commands.has_permissions(manage_guild=True)
-    async def testbong(self, ctx: vbu.Context):
+    async def testbong(self, ctx: vbu.SlashContext):
         """
         Send a test bong.
         """
 
-        self.bot.dispatch("bong", ctx.guild.id)
+        self.bot.dispatch("bong", ctx.interaction.guild_id)
         return await ctx.send("Dispatched test bong.")
 
     async def disable_components(self, payload: discord.Interaction):
@@ -445,14 +445,14 @@ class BigBen(vbu.Cog):
     @commands.defer()
     @commands.bot_has_permissions(send_messages=True)
     @commands.guild_only()
-    async def bongcount(self, ctx: vbu.Context, user: discord.Member = None):
+    async def bongcount(self, ctx: vbu.SlashContext, user: discord.Member = None):
         """
         Counts how many times a user has gotten the first bong reaction.
         """
 
         user = user or ctx.author
         async with self.bot.database() as db:
-            rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 AND user_id=$2", ctx.guild.id, user.id)
+            rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 AND user_id=$2", ctx.interaction.guild_id, user.id)
         if rows:
             average = sum([(i['timestamp'] - i['message_timestamp']).total_seconds() for i in rows]) / len(rows)
             return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
@@ -465,7 +465,7 @@ class BigBen(vbu.Cog):
     @commands.defer()
     @commands.bot_has_permissions(send_messages=True, embed_links=True)
     @commands.guild_only()
-    async def leaderboard(self, ctx: vbu.Context):
+    async def leaderboard(self, ctx: vbu.SlashContext):
         """
         Gives you the bong leaderboard.
         """
@@ -474,7 +474,7 @@ class BigBen(vbu.Cog):
             rows = await db(
                 """SELECT user_id, count(user_id) FROM bong_log WHERE guild_id=$1 GROUP BY user_id
                 ORDER BY count(user_id) DESC, user_id DESC""",
-                ctx.guild.id,
+                ctx.interaction.guild_id,
             )
         if not rows:
             return await ctx.send("Nobody has reacted to the bong message yet on your server :<")
@@ -484,14 +484,14 @@ class BigBen(vbu.Cog):
     # @commands.command(enabled=False)
     # @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)
     # @commands.guild_only()
-    # async def bongdist(self, ctx: vbu.Context, user: discord.Member = None):
+    # async def bongdist(self, ctx: vbu.SlashContext, user: discord.Member = None):
     #     """
     #     Gives you the bong leaderboard.
     #     """
 
     #     user = user or ctx.author
     #     async with self.bot.database() as db:
-    #         rows = await db("SELECT timestamp - message_timestamp AS reaction_time FROM bong_log WHERE user_id=$1 AND guild_id=$2", user.id, ctx.guild.id)
+    #         rows = await db("SELECT timestamp - message_timestamp AS reaction_time FROM bong_log WHERE user_id=$1 AND guild_id=$2", user.id, ctx.interaction.guild_id)
     #     if not rows:
     #         return await ctx.send(f"{user.mention} has reacted to the bong message yet on your server.")
 
