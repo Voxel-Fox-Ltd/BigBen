@@ -50,8 +50,6 @@ class BigBen(vbu.Cog):
         Do the bong.
         """
 
-        await asyncio.wait(self.bot.startup_method)  # Wait for the caching to be done
-
         # See if it should post
         now = dt.utcnow()
         if now.hour != self.last_posted_hour and now.minute == 0:
