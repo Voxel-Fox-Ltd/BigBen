@@ -50,6 +50,8 @@ class BigBen(vbu.Cog):
         Do the bong.
         """
 
+        await self.bot.startup_method.wait()  # Wait for the caching to be done
+
         # See if it should post
         now = dt.utcnow()
         if now.hour != self.last_posted_hour and now.minute == 0:
@@ -97,14 +99,6 @@ class BigBen(vbu.Cog):
 
             # Set up our emoji to be added
             emoji = settings['bong_emoji']
-            if emoji is not None:
-                if emoji.startswith("<"):
-                    match = self.EMOJI_REGEX.search(emoji)
-                    assert match
-                    found = match.group("id")
-                    if not self.bot.get_emoji(int(found)):
-                        self.logger.info(f"Add reaction cancelled - emoji with ID {found} not found")
-                        emoji = None
 
             # See if we should get some other text
             override_text = settings.get('override_text', {}).get(f"{now.month}-{now.day}")
@@ -521,5 +515,6 @@ class BigBen(vbu.Cog):
 
 
 def setup(bot: vbu.Bot):
+    bot.startup_method = bot.loop.create_task(bot.startup())
     x = BigBen(bot)
     bot.add_cog(x)
