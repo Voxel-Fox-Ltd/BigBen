@@ -332,20 +332,23 @@ class BigBen(vbu.Cog):
             pass
 
         # Check they gave the right reaction
-        guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
+        # guild = self.bot.get_guild(payload.guild_id) or await self.bot.fetch_guild(payload.guild_id)
 
         # Database handle
-        self.logger.info(f"Guild {guild.id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
+        self.logger.info(f"Guild {payload.guild_id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
         self.bong_messages.discard(payload.message.id)
         async with self.bot.database() as db:
             current_bong_member_rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1", guild.id)
             await db(
                 """INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)""",
-                guild.id, payload.user.id, dt.utcnow(), discord.Object(payload.message.id).created_at,
+                payload.guild_id, payload.user.id, dt.utcnow(), discord.Object(payload.message.id).created_at,
             )
 
+        # Don't manage roles for now
+        return
+
         # Check they have a role set up
-        role_id = self.bot.guild_settings[guild.id]['bong_role_id']
+        role_id = self.bot.guild_settings[payload.guild_id]['bong_role_id']
         if role_id is None:
             return
 
