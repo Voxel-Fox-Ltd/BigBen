@@ -50,7 +50,7 @@ class BigBen(vbu.Cog):
         Do the bong.
         """
 
-        await self.bot.startup_method.wait()  # Wait for the caching to be done
+        await asyncio.wait(self.bot.startup_method)  # Wait for the caching to be done
 
         # See if it should post
         now = dt.utcnow()
