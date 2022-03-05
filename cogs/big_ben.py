@@ -223,7 +223,7 @@ class BigBen(vbu.Cog):
         Disable the components on a message.
         """
 
-        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
+        edit_url = self.bot.guild_settings[payload.message.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
         await self.bot.session.patch(
             edit_url,
             json={
@@ -260,7 +260,7 @@ class BigBen(vbu.Cog):
             bong_button.label = f"{button_clicks} click"
 
         # Edit the message
-        edit_url = self.bot.guild_settings[payload.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
+        edit_url = self.bot.guild_settings[payload.message.guild.id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
         r = await self.bot.session.patch(
             edit_url,
             json={
