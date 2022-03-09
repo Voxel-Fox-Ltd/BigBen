@@ -216,7 +216,7 @@ class BongHandler(vbu.Cog):
         Parameters
         ----------
         payload : discord.Interaction
-            A (responded to) interaction that lets us update the bong message.
+            A (not responded to) interaction that lets us update the bong message.
         """
 
         # Get the current components
@@ -247,16 +247,10 @@ class BongHandler(vbu.Cog):
         else:
             bong_button.label = f"{button_clicks} click"
 
-        # Edit the message
-        # We can't just do `message.edit` here because the message was posted by a webhook
-        edit_url = self.bot.guild_settings[payload.guild_id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
-        r = await self.bot.session.patch(
-            edit_url,
-            json={
-                "components": components.to_dict(),
-            },
-        )
-        self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status}")
+        # Edit the message using the payload
+        await payload.response.edit_message(components=components)
+        # self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status}")
+        self.logger.info(f"Tried to update components on message {payload.message.id}")
 
     @vbu.Cog.listener()
     async def on_component_interaction(self, payload: discord.Interaction[str]):
@@ -291,11 +285,13 @@ class BongHandler(vbu.Cog):
 
         # Check that the times are the same, so that the user can get good
         if message_time_serial != now_serial:
-            await payload.response.send_message("You can't click a bong button from the past :<", ephemeral=True)
 
             # If the button is cached then we'll handle it
             if payload.message.id in self.bong_button_clicks and payload.message.id in self.first_button_click:
                 await self.update_bong_message_components(payload)
+                await payload.followup.send("You can't click a bong button from the past :<", ephemeral=True)
+            else:
+                await payload.response.send_message("You can't click a bong button from the past :<", ephemeral=True)
             return
 
         # Say that the user has clicked the button
@@ -306,6 +302,7 @@ class BongHandler(vbu.Cog):
         lock = self.bong_handle_locks[payload.message.id]
 
         # Try and get the lock
+        response_text: str = ""
         try:
             if lock.locked():
                 raise asyncio.TimeoutError()
@@ -313,25 +310,27 @@ class BongHandler(vbu.Cog):
 
         # Can't get the lock, tell them they weren't first
         except asyncio.TimeoutError:
-            try:
-                await payload.response.send_message("You weren't the first person to click the button :c", ephemeral=True)
-            except discord.NotFound:
-                pass
+            response_text = "You weren't the first person to click the button :c"
 
         # We got the lock! Let's go gamer
         else:
-            try:
+
+            # See if it's in our list of unreacted-to messages
+            if payload.message.id not in self.current_bong_messages:
+                response_text = "This button has already been clicked :<"
+            else:
+                response_text = "You were the first to react! :D"
                 await self.handle_bong_component(payload)
-            except:
-                pass
             lock.release()
 
         # And update the bong message
         await self.update_bong_message_components(payload)
+        if response_text:
+            await payload.followup.send(response_text, ephemeral=True)
 
     async def handle_bong_component(self, payload: discord.Interaction):
         """
-        Handle a bong button being pressed
+        Handle a bong button being pressed for the first time
         """
 
         try:
@@ -340,25 +339,11 @@ class BongHandler(vbu.Cog):
         except AssertionError:
             return
 
-        # See if it's in our list of unreacted-to messages
-        if payload.message.id not in self.current_bong_messages:
-            try:
-                await payload.response.send_message("This button has already been clicked :<", ephemeral=True)
-            except discord.NotFound:
-                pass
-            return
-
-        # Tell them they were first
-        try:
-            await payload.response.send_message("You were the first to react! :D", ephemeral=True)
-        except discord.NotFound:
-            pass
-
         # Database handle
         self.logger.info(f"Guild {payload.guild_id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
         self.current_bong_messages.discard(payload.message.id)  # We don't need to handle this one any more
         async with self.bot.database() as db:
-            current_bong_member_rows = await db(
+            await db(
                 """SELECT * FROM bong_log WHERE guild_id=$1 ORDER BY timestamp DESC LIMIT 1""",
                 payload.guild_id,
             )
