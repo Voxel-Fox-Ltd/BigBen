@@ -340,7 +340,7 @@ class BongHandler(vbu.Cog):
             return
 
         # Database handle
-        self.logger.info(f"Guild {payload.guild_id} with user {payload.user.id} in {dt.utcnow() - discord.Object(payload.message.id).created_at}")
+        self.logger.info(f"Guild {payload.guild_id} with user {payload.user.id} in {discord.utils.utcnow() - discord.Object(payload.message.id).created_at}")
         self.current_bong_messages.discard(payload.message.id)  # We don't need to handle this one any more
         async with self.bot.database() as db:
             await db(
