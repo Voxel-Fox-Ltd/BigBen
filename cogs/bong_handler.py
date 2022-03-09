@@ -349,7 +349,10 @@ class BongHandler(vbu.Cog):
             )
             await db(
                 """INSERT INTO bong_log (guild_id, user_id, timestamp, message_timestamp) VALUES ($1, $2, $3, $4)""",
-                payload.guild_id, payload.user.id, dt.utcnow(), discord.Object(payload.message.id).created_at,
+                payload.guild_id,
+                payload.user.id,
+                discord.utils.naive_dt(discord.utils.utcnow()),
+                discord.utils.naive_dt(discord.Object(payload.message.id).created_at),
             )
 
         # Don't manage roles for now
