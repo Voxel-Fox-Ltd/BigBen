@@ -248,14 +248,14 @@ class BongHandler(vbu.Cog):
             bong_button.label = f"{button_clicks} click"
 
         # Edit the message
-        # edit_url = self.bot.guild_settings[payload.guild_id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
-        await payload.message.edit(components=components)
-        # r = await self.bot.session.patch(
-        #     edit_url,
-        #     json={
-        #         "components": components.to_dict(),
-        #     },
-        # )
+        # We can't just do `message.edit` here because the message was posted by a webhook
+        edit_url = self.bot.guild_settings[payload.guild_id]['bong_channel_webhook'].rstrip("/") + f"/messages/{payload.message.id}"
+        r = await self.bot.session.patch(
+            edit_url,
+            json={
+                "components": components.to_dict(),
+            },
+        )
         self.logger.info(f"Tried to update components on message {payload.message.id} - {r.status}")
 
     @vbu.Cog.listener()
