@@ -201,13 +201,13 @@ class BongHandler(vbu.Cog):
         self.logger.info("Done sending bong messages")
 
         # Delete channels that we should no longer care about
-        async with self.bot.database() as db:
-            await db(
-                """UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])""",
-                list(guilds_to_delete),
-            )
-        for guild_id in guilds_to_delete:
-            self.bot.guild_settings[guild_id]['bong_channel_id'] = None
+        # async with self.bot.database() as db:
+        #     await db(
+        #         """UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])""",
+        #         list(guilds_to_delete),
+        #     )
+        # for guild_id in guilds_to_delete:
+        #     self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
     async def update_bong_message_components(self, payload: discord.Interaction):
         """
