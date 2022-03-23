@@ -5,7 +5,7 @@ import discord
 async def bong_channel_storage_whatever(ctx, data):
     channel = data[0]
     await vbu.menus.Menu.callbacks.set_table_column(vbu.menus.DataLocation.GUILD, "guild_settings", "bong_channel_id")(ctx, (channel,))
-    ctx.bot.guild_settings[ctx.guild.id]["bong_channel_id"] = channel.id if channel is not None else channel
+    ctx.bot.guild_settings[ctx.interaction.guild_id]["bong_channel_id"] = channel.id if channel is not None else channel
     if channel is None:
         return
     try:
@@ -16,14 +16,14 @@ async def bong_channel_storage_whatever(ctx, data):
         await db(
             """INSERT INTO guild_settings (guild_id, bong_channel_webhook)
             VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET bong_channel_webhook=$2""",
-            ctx.guild.id, webhook.url,
+            ctx.interaction.guild_id, webhook.url,
         )
-    ctx.bot.guild_settings[ctx.guild.id]["bong_channel_webhook"] = webhook.url
+    ctx.bot.guild_settings[ctx.interaction.guild_id]["bong_channel_webhook"] = webhook.url
 
 
 settings_menu = vbu.menus.Menu(
     vbu.menus.Option(
-        display=lambda ctx: f"Set bong channel (currently {ctx.get_mentionable_channel(ctx.bot.guild_settings[ctx.guild.id]['bong_channel_id']).mention})",
+        display=lambda ctx: f"Set bong channel (currently {ctx.get_mentionable_channel(ctx.bot.guild_settings[ctx.interaction.guild_id]['bong_channel_id']).mention})",
         component_display="Set bong channel",
         converters=[
             vbu.menus.Converter(
@@ -35,7 +35,7 @@ settings_menu = vbu.menus.Menu(
         cache_callback=None,
     ),
     vbu.menus.Option(
-        display=lambda ctx: f"Set bong role (currently {ctx.get_mentionable_role(ctx.bot.guild_settings[ctx.guild.id]['bong_role_id']).mention})",
+        display=lambda ctx: f"Set bong role (currently {ctx.get_mentionable_role(ctx.bot.guild_settings[ctx.interaction.guild_id]['bong_role_id']).mention})",
         component_display="Set bong role",
         converters=[
             vbu.menus.Converter(
@@ -47,7 +47,7 @@ settings_menu = vbu.menus.Menu(
         cache_callback=vbu.menus.Menu.callbacks.set_cache_from_key(vbu.menus.DataLocation.GUILD, "bong_role_id"),
     ),
     vbu.menus.Option(
-        display=lambda ctx: f"Set bong emoji (currently {ctx.bot.guild_settings[ctx.guild.id]['bong_emoji'] or 'null'})",
+        display=lambda ctx: f"Set bong emoji (currently {ctx.bot.guild_settings[ctx.interaction.guild_id]['bong_emoji'] or 'null'})",
         component_display="Set bong emoji",
         converters=[
             vbu.menus.Converter(
