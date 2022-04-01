@@ -113,7 +113,6 @@ class BongHandler(vbu.Cog):
                 return
             url = webhook_url + "?wait=1"
             payload.update({
-                "wait": True,
                 "username": self.bot.user.name,
                 "avatar_url": avatar_url,
             })
@@ -137,11 +136,15 @@ class BongHandler(vbu.Cog):
                     )
                 ).to_dict()
 
+            # Generate headers
+            headers = {
+                "User-Agent": self.bot.user_agent,
+                "Authorization": f"Bot {self.bot.config['token']}",
+            }
+
             # Send message
             try:
-                self.logger.info(payload)
-                site = await self.bot.session.post(url, json=payload)
-                self.logger.info(await site.text())
+                site = await self.bot.session.post(url, json=payload, headers=headers)
                 message_payload = await site.json()
             except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                 try:
