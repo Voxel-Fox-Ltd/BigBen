@@ -1,3 +1,5 @@
+import typing
+
 import discord
 from discord.ext import commands, vbu
 
@@ -32,17 +34,26 @@ class BigBen(vbu.Cog):
     @commands.defer()
     @commands.bot_has_permissions(send_messages=True)
     @commands.guild_only()
-    async def bongcount(self, ctx: vbu.SlashContext, user: discord.Member = None):
+    async def bongcount(self, ctx: vbu.SlashContext, user: typing.Optional[discord.Member] = None):
         """
         Counts how many times a user has gotten the first bong reaction.
         """
 
-        user = user or ctx.author
+        # Work out who we're running the command on
+        user = user or ctx.author  # type: ignore
+        assert user  # Make sure it's actually set
+
+        # Get the data we need
         async with self.bot.database() as db:
             rows = await db("SELECT * FROM bong_log WHERE guild_id=$1 AND user_id=$2", ctx.interaction.guild_id, user.id)
+
+        # Format and send their data
         if rows:
             average = sum([(i['timestamp'] - i['message_timestamp']).total_seconds() for i in rows]) / len(rows)
-            return await ctx.send(f"{user.mention} has gotten the first bong reaction {len(rows)} times, averaging a {average:,.2f}s reaction time.")
+            return await ctx.send(
+                f"{user.mention} has gotten the first bong reaction {len(rows)} times, "
+                f"averaging a {average:,.2f}s reaction time."
+            )
         return await ctx.send(f"{user.mention} has gotten the first bong reaction 0 times :c")
 
     @commands.command(
@@ -67,6 +78,7 @@ class BigBen(vbu.Cog):
             return await ctx.send("Nobody has reacted to the bong message yet on your server :<")
         lines = [f"{index}. <@{row['user_id']}> ({row['count']} bongs)" for index, row in enumerate(rows, start=1)]
         await vbu.Paginator(lines, per_page=10).start(ctx)
+
 
     # @commands.command(enabled=False)
     # @commands.bot_has_permissions(send_messages=True, attach_files=True, embed_links=True)

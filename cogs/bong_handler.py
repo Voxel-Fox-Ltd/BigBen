@@ -139,7 +139,9 @@ class BongHandler(vbu.Cog):
 
             # Send message
             try:
+                self.logger.info(payload)
                 site = await self.bot.session.post(url, json=payload)
+                self.logger.info(await site.text())
                 message_payload = await site.json()
             except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
                 try:
