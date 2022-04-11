@@ -179,14 +179,15 @@ class BongHandler(vbu.Cog):
             # Send message
             # site: aiohttp.ClientResponse = self.bot.session.post(url, json=payload, headers=headers)
             if self.PROXY_LIST:
-                proxies = {"http": random.choice(self.PROXY_LIST)}
+                purl = random.choice(self.PROXY_LIST)
+                proxies = {"http": purl, "https": purl}
                 self.logger.debug(f"Sending bong message for {url} with {proxies}")
                 site: requests.Response = requests.post(
                     url,
                     json=payload,
                     headers=headers,
                     proxies=proxies,
-                    timeout=1,
+                    timeout=5,
                 )
             else:
                 self.logger.debug(f"Sending bong message for {url} with no proxy")
@@ -194,7 +195,7 @@ class BongHandler(vbu.Cog):
                     url,
                     json=payload,
                     headers=headers,
-                    timeout=1,
+                    timeout=5,
                 )
             self.logger.debug(site.text)
             if site.ok:
