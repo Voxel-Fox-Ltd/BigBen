@@ -262,7 +262,7 @@ class BongHandler(vbu.Cog):
                     ))
 
         # Gather all of our data, send all the messages, etc
-        await asyncio.gather(*tasks_to_gather)
+        await asyncio.wait_for(asyncio.gather(*tasks_to_gather), timeout=5)
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
