@@ -181,14 +181,16 @@ class BongHandler(vbu.Cog):
                     url,
                     json=payload,
                     headers=headers,
-                    proxies=proxies
+                    proxies=proxies,
+                    timeout=1,
                 )
             else:
                 self.logger.debug(f"Sending bong message for {url} with no proxy")
                 site: requests.Response = requests.post(
                     url,
                     json=payload,
-                    headers=headers,
+                    headers=headers,,
+                    timeout=1,
                 )
             self.logger.debug(site.text)
             if site.ok:
