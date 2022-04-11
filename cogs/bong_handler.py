@@ -71,6 +71,8 @@ class BongHandler(vbu.Cog):
         params = {
             "email": self.bot.config.get('didsoft', dict()).get('email'),
             "pass": self.bot.config.get('didsoft', dict()).get('pass'),
+            "pid": "http3000",
+            "showcountry": "no",
         }
         headers = {
             "User-Agent": self.bot.user_agent,
