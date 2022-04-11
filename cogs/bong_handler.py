@@ -5,8 +5,9 @@ from datetime import datetime as dt
 import re
 import collections
 from typing import Dict, Union, Tuple, Optional
-import json
+import random
 import typing
+import requests
 
 import discord
 from discord.ext import tasks, vbu
@@ -35,6 +36,7 @@ class BongHandler(vbu.Cog):
         (9, 4, 2023): "Easter Bong",
         (31, 3, 2024): "Easter Bong",
     }  # (DD, MM, YYYY?): Output
+    PROXY_LIST: typing.List[str] = []
 
     def __init__(self, bot: vbu.Bot):
         super().__init__(bot)
@@ -60,6 +62,25 @@ class BongHandler(vbu.Cog):
     def cog_unload(self):
         self.bing_bong.cancel()
 
+    async def populate_proxy_list(self):
+        """
+        Populates the Didsoft Proxy list :)
+        """
+
+        base = "http://list.didsoft.com/get"
+        params = {
+            "email": self.bot.config.get('didsoft', dict()).get('email'),
+            "email": self.bot.config.get('didsoft', dict()).get('pass'),
+        }
+        headers = {
+            "User-Agent": self.bot.user_agent,
+        }
+        if None in params.values():
+            return  # Do nothing
+        async with self.bot.session.get(base, params=params, headers=headers) as r:
+            data = await r.text()
+        self.PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
+
     @tasks.loop(seconds=1)
     async def bing_bong(self):
         """
@@ -68,13 +89,15 @@ class BongHandler(vbu.Cog):
 
         # See if it should post
         now = dt.utcnow()
+        if now.minute == 57:
+            await self.populate_proxy_list()
         if now.hour != self.last_posted_hour and now.minute == 0:
             self.last_posted_hour = now.hour
         else:
             return
         self.bot.dispatch("bong")
 
-    async def send_guild_bong_message(
+    def send_guild_bong_message(
             self,
             text: str,
             now: dt,
@@ -82,7 +105,7 @@ class BongHandler(vbu.Cog):
             settings: dict,
             guilds_to_delete: set):
         """
-        An async function to send a bong message to the given guild.
+        A sync function to send a bong message to the given guild. Should be threaded.
 
         Parameters
         ----------
@@ -150,13 +173,19 @@ class BongHandler(vbu.Cog):
             }
 
             # Send message
-            site: aiohttp.ClientResponse = await self.bot.session.post(url, json=payload, headers=headers)
+            # site: aiohttp.ClientResponse = self.bot.session.post(url, json=payload, headers=headers)
+            site: requests.Response = requests.post(
+                url,
+                json=payload,
+                headers=headers,
+                proxies={"http": random.choice(self.PROXY_LIST)}
+            )
             if site.ok:
-                message_payload = await site.json()
+                message_payload = site.json()
                 # elif site.status in [400, 401, 403, 404]:
             else:
-                message_payload = await site.text()
-                self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
+                message_payload = site.text
+                self.logger.info(f"Send failed - {site.status_code} (G{guild_id}/C{channel_id}) - {message_payload}")
                 return
             # elif site.status in [429]:
             #     message_payload = await site.text()
@@ -208,7 +237,8 @@ class BongHandler(vbu.Cog):
 
             # See if they have a webhook
             if settings.get("bong_channel_webhook"):
-                tasks_to_gather.append(self.send_guild_bong_message(
+                tasks_to_gather.append(asyncio.to_thread(
+                    self.send_guild_bong_message,
                     text, now, guild_id, settings, guilds_to_delete,
                 ))
 

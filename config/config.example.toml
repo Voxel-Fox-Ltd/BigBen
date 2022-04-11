@@ -117,6 +117,10 @@ owners_ignore_check_failures = true  # Whether or not owners ignore check failur
     client_id = ""
     client_secret = ""
 
+[didsoft]
+    email = ""
+    pass = ""
+
 # Statsd analytics port using the aiodogstatsd package
 [statsd]
     host = "127.0.0.1"
