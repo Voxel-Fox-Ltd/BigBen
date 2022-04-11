@@ -182,47 +182,46 @@ class BongHandler(vbu.Cog):
 
             # Send message
             # site: aiohttp.ClientResponse = self.bot.session.post(url, json=payload, headers=headers)
-            if self.PROXY_LIST:
-                proxies = {
-                    "http": random.choice(self.PROXY_LIST),
-                    "https": random.choice(self.HTTPS_PROXY_LIST),
-                }
-                self.logger.debug(f"Sending bong message for {url} with {proxies}")
-                site: requests.Response = requests.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                    proxies=proxies,
-                    timeout=5,
-                )
-            else:
-                self.logger.debug(f"Sending bong message for {url} with no proxy")
-                site: requests.Response = requests.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                    timeout=5,
-                )
-            self.logger.debug(site.text)
-            if site.ok:
-                message_payload = site.json()
-                # elif site.status in [400, 401, 403, 404]:
-            else:
+            site: typing.Optional[requests.Response] = None
+            message_payload: typing.Optional[str] = None
+            try:
+                if self.PROXY_LIST:
+                    proxies = {
+                        "http": random.choice(self.PROXY_LIST),
+                        "https": random.choice(self.HTTPS_PROXY_LIST),
+                    }
+                    self.logger.debug(f"Sending bong message for {url} with {proxies}")
+                    site = requests.post(
+                        url,
+                        json=payload,
+                        headers=headers,
+                        proxies=proxies,
+                        timeout=5,
+                    )
+                else:
+                    self.logger.debug(f"Sending bong message for {url} with no proxy")
+                    site = requests.post(
+                        url,
+                        json=payload,
+                        headers=headers,
+                        timeout=5,
+                    )
                 message_payload = site.text
-                self.logger.info(f"Send failed - {site.status_code} (G{guild_id}/C{channel_id}) - {message_payload}")
+            except Exception as e:
+                site = None
+                message_payload = str(e)
+            if site and site.ok:
+                message_json = site.json()
+            else:
+                if site:
+                    self.logger.info(f"Send failed - {site.status_code} (G{guild_id}/C{channel_id}) - {message_payload}")
+                else:
+                    self.logger.info(f"Send failed - 0 (G{guild_id}/C{channel_id}) - {message_payload}")
                 return
-            # elif site.status in [429]:
-            #     message_payload = await site.text()
-            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
-            #     return
-            # else:
-            #     message_payload = await site.text()
-            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id})")
-            #     return
 
             # Cache message
-            self.current_bong_messages.add(int(message_payload['id']))
-            self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message_payload['id']})")
+            self.current_bong_messages.add(int(message_json['id']))
+            self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message_json['id']})")
 
         except Exception as e:
             self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}", exc_info=e)
