@@ -7,10 +7,10 @@ import collections
 from typing import Dict, Union, Tuple, Optional
 import random
 import typing
-import requests
 
 import discord
 from discord.ext import tasks, vbu
+import requests
 
 if typing.TYPE_CHECKING:
     import aiohttp
@@ -105,6 +105,11 @@ class BongHandler(vbu.Cog):
             return
         self.bot.dispatch("bong")
 
+    def post_with_proxy(self, proxies: typing.Optional[dict], *args, **kwargs):
+        if proxies:
+            return requests.post(*args, **kwargs, proxies=proxies)
+        return requests.post(*args, **kwargs)
+
     def send_guild_bong_message(
             self,
             text: str,
@@ -185,28 +190,33 @@ class BongHandler(vbu.Cog):
             site: typing.Optional[requests.Response] = None
             message_payload: typing.Optional[str] = None
             try:
-                if self.PROXY_LIST:
-                    proxies = {
-                        "http": random.choice(self.PROXY_LIST),
-                        "https": random.choice(self.HTTPS_PROXY_LIST),
-                    }
+                while True:
+                    if self.PROXY_LIST:
+                        proxies = {
+                            "http": random.choice(self.PROXY_LIST),
+                            "https": random.choice(self.HTTPS_PROXY_LIST),
+                        }
+                    else:
+                        proxies = None
                     self.logger.debug(f"Sending bong message for {url} with {proxies}")
-                    site = requests.post(
-                        url,
-                        json=payload,
-                        headers=headers,
-                        proxies=proxies,
-                        timeout=5,
-                    )
-                else:
-                    self.logger.debug(f"Sending bong message for {url} with no proxy")
-                    site = requests.post(
-                        url,
-                        json=payload,
-                        headers=headers,
-                        timeout=5,
-                    )
-                message_payload = site.text
+                    try:
+                        site = self.post_with_proxy(
+                            proxies,
+                            url,
+                            json=payload,
+                            headers=headers,
+                            timeout=5,
+                        )
+                    except requests.exceptions.ProxyError as pe:
+                        self.logger.debug(f"Proxy failed {pe.request.proxies}; removing")
+                        for i in pe.request.proxies.values():
+                            try: self.PROXY_LIST.remove(i)
+                            except ValueError: pass
+                            try: self.HTTPS_PROXY_LIST.remove(i)
+                            except ValueError: pass
+                        continue
+                    message_payload = site.text
+                    break
             except Exception as e:
                 site = None
                 message_payload = str(e)
