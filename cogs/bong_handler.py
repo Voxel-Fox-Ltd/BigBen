@@ -82,7 +82,7 @@ class BongHandler(vbu.Cog):
                 return False
             return True
         working = await self.bot.loop.run_in_executor(None, wrapper)
-        self.logger.info(f"Checked proxy {proxy}; {'working' if working else 'hecked'}")
+        self.logger.info(f"Checked {'https' if https else 'http'} proxy {proxy}; {'working' if working else 'hecked'}")
         return working
 
     @tasks.loop(minutes=10)
