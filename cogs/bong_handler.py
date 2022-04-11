@@ -270,14 +270,14 @@ class BongHandler(vbu.Cog):
             # See if they have a webhook
             if settings.get("bong_channel_webhook"):
                 if bong_guild_id is not None:
-                    # await asyncio.to_thread(
-                    #     self.send_guild_bong_message,
-                    #     text, now, guild_id, settings, guilds_to_delete,
-                    # )
-                    try:
-                        self.send_guild_bong_message(text, now, guild_id, settings, guilds_to_delete)
-                    except Exception as e:
-                        self.logger.error("Angy", exc_info=e)
+                    await asyncio.to_thread(
+                        self.send_guild_bong_message,
+                        text, now, guild_id, settings, guilds_to_delete,
+                    )
+                    # try:
+                    #     self.send_guild_bong_message(text, now, guild_id, settings, guilds_to_delete)
+                    # except Exception as e:
+                    #     self.logger.error("Angy", exc_info=e)
                 else:
                     tasks_to_gather.append(asyncio.to_thread(
                         self.send_guild_bong_message,

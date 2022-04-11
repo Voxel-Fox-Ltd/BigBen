@@ -9,18 +9,17 @@ class BigBen(vbu.Cog):
     @commands.command(
         application_command_meta=commands.ApplicationCommandMeta()
     )
-    @commands.defer()
     @commands.has_permissions(manage_guild=True)
     async def testbong(self, ctx: vbu.SlashContext):
         """
         Send a test bong.
         """
 
+        await ctx.send("Dispatching...")
         handler = self.bot.get_cog("BongHandler")
         if not (handler.PROXY_LIST and handler.HTTPS_PROXY_LIST):
             await handler.populate_proxy_list()
         self.bot.dispatch("bong", ctx.interaction.guild_id)
-        return await ctx.send("Dispatched test bong.")
 
     @commands.command(
         application_command_meta=commands.ApplicationCommandMeta(
