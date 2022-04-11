@@ -81,7 +81,7 @@ class BongHandler(vbu.Cog):
             except:
                 return False
             return True
-        working = await asyncio.to_thread(wrapper)
+        working = await self.bot.loop.run_in_executor(None, wrapper)
         self.logger.info(f"Checked proxy {proxy}; {'working' if working else 'hecked'}")
         return working
 
