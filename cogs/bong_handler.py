@@ -189,7 +189,7 @@ class BongHandler(vbu.Cog):
                 site: requests.Response = requests.post(
                     url,
                     json=payload,
-                    headers=headers,,
+                    headers=headers,
                     timeout=1,
                 )
             self.logger.debug(site.text)
