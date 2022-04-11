@@ -193,7 +193,7 @@ class BongHandler(vbu.Cog):
                 while True:
                     if self.PROXY_LIST:
                         proxies = {
-                            "http": random.choice(self.PROXY_LIST),
+                            # "http": random.choice(self.PROXY_LIST),
                             "https": random.choice(self.HTTPS_PROXY_LIST),
                         }
                     else:
@@ -208,12 +208,11 @@ class BongHandler(vbu.Cog):
                             timeout=5,
                         )
                     except requests.exceptions.ProxyError as pe:
-                        self.logger.debug(f"Proxy failed {pe.request.proxies}; removing")
-                        for i in pe.request.proxies.values():
-                            try: self.PROXY_LIST.remove(i)
-                            except ValueError: pass
-                            try: self.HTTPS_PROXY_LIST.remove(i)
-                            except ValueError: pass
+                        self.logger.debug(f"Proxy failed {proxies}; removing")
+                        try:
+                            self.HTTPS_PROXY_LIST.remove(proxies['https'])  # type: ignore
+                        except ValueError:
+                            pass
                         continue
                     message_payload = site.text
                     break
