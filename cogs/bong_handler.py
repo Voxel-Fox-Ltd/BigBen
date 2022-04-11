@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 from datetime import datetime as dt
 import re
 import collections
 from typing import Dict, Union, Tuple, Optional
+import json
+import typing
 
 import discord
 from discord.ext import tasks, vbu
+
+if typing.TYPE_CHECKING:
+    import aiohttp
 
 
 class BongHandler(vbu.Cog):
@@ -143,23 +150,29 @@ class BongHandler(vbu.Cog):
             }
 
             # Send message
-            try:
-                site = await self.bot.session.post(url, json=payload, headers=headers)
+            site: aiohttp.ClientResponse = await self.bot.session.post(url, json=payload, headers=headers)
+            if site.ok:
                 message_payload = await site.json()
-            except (discord.Forbidden, discord.NotFound, discord.HTTPException) as e:
-                try:
-                    guilds_to_delete.add(guild_id)
-                except:
-                    pass
-                self.logger.info(f"Send failed - {e} (G{guild_id}/C{channel_id})")
+                # elif site.status in [400, 401, 403, 404]:
+            else:
+                message_payload = await site.text()
+                self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id})")
                 return
+            # elif site.status in [429]:
+            #     message_payload = await site.text()
+            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
+            #     return
+            # else:
+            #     message_payload = await site.text()
+            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id})")
+            #     return
 
             # Cache message
             self.current_bong_messages.add(int(message_payload['id']))
             self.logger.info(f"Sent bong message to channel (G{guild_id}/C{channel_id}/M{message_payload['id']})")
 
         except Exception as e:
-            self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}")
+            self.logger.info(f"Failed sending message to guild (G{guild_id}) - {e}", exc_info=e)
 
     @vbu.Cog.listener("on_bong")
     async def do_bong(self, bong_guild_id: Optional[int] = None):
