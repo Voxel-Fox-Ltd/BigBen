@@ -83,7 +83,9 @@ class BongHandler(vbu.Cog):
             return True
         working = await self.bot.loop.run_in_executor(None, wrapper)
         self.logger.info(f"Checked {'https' if https else 'http'} proxy {proxy}; {'working' if working else 'hecked'}")
-        return working
+        if working:
+            return (proxy, https,)
+        return None
 
     @tasks.loop(minutes=10)
     async def populate_proxy_list(self):
@@ -91,6 +93,7 @@ class BongHandler(vbu.Cog):
         Populates the Didsoft Proxy list :)
         """
 
+        # Build params
         base = "http://list.didsoft.com/get"
         params = {
             "email": self.bot.config.get('didsoft', dict()).get('email'),
@@ -102,21 +105,25 @@ class BongHandler(vbu.Cog):
         headers = {
             "User-Agent": self.bot.user_agent,
         }
+
+        # See if we should exit
         if None in params.values():
             return  # Do nothing
+
+        # Check SSL
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
-        self.HTTPS_PROXY_LIST = [
-            i.strip() for i in data.strip().split("\n")
-            if await self.test_proxy(self.bot.session, i.strip(), https=True)
-        ]
+        proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=True) for i in data.strip().split("\n")]
+        proxy_check_result = await asyncio.gather(*proxy_check_tasks)
+        self.HTTPS_PROXY_LIST = [i[0] for i in proxy_check_result if i]
+
+        # Check HTTP
         params.pop("https", None)
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
-        self.PROXY_LIST = [
-            i.strip() for i in data.strip().split("\n")
-            if await self.test_proxy(self.bot.session, i.strip(), https=False)
-        ]
+        proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=False) for i in data.strip().split("\n")]
+        proxy_check_result = await asyncio.gather(*proxy_check_tasks)
+        self.PROXY_LIST = [i[0] for i in proxy_check_result if i]
 
     @tasks.loop(seconds=1)
     async def bing_bong(self):
