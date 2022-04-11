@@ -66,6 +66,25 @@ class BongHandler(vbu.Cog):
         self.populate_proxy_list.cancel()
         self.bing_bong.cancel()
 
+    async def test_proxy(self, session: aiohttp.ClientSession, proxy: str, https: bool, *, timeout: float = 3):
+        """
+        Test a proxy by pinging it against localhost.
+        """
+
+        def wrapper():
+            try:
+                site = requests.get(
+                    "http://127.0.0.1:6969",
+                    proxies={"https" if https else "http": proxy},
+                    timeout=timeout,
+                )
+            except:
+                return False
+            return True
+        working = await asyncio.to_thread(wrapper)
+        self.logger.info(f"Checked proxy {proxy}; {'working' if working else 'hecked'}")
+        return working
+
     @tasks.loop(minutes=10)
     async def populate_proxy_list(self):
         """
@@ -87,11 +106,17 @@ class BongHandler(vbu.Cog):
             return  # Do nothing
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
-        self.HTTPS_PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
+        self.HTTPS_PROXY_LIST = [
+            i.strip() for i in data.strip().split("\n")
+            if await self.test_proxy(self.bot.session, i.strip(), https=True)
+        ]
         params.pop("https", None)
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
-        self.PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
+        self.PROXY_LIST = [
+            i.strip() for i in data.strip().split("\n")
+            if await self.test_proxy(self.bot.session, i.strip(), https=False)
+        ]
 
     @tasks.loop(seconds=1)
     async def bing_bong(self):
