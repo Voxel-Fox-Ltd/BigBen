@@ -156,7 +156,7 @@ class BongHandler(vbu.Cog):
                 # elif site.status in [400, 401, 403, 404]:
             else:
                 message_payload = await site.text()
-                self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id})")
+                self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
                 return
             # elif site.status in [429]:
             #     message_payload = await site.text()
