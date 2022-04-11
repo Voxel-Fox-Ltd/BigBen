@@ -7,6 +7,7 @@ import collections
 from typing import Dict, Union, Tuple, Optional
 import random
 import typing
+from urllib3.exceptions import ConnectTimeoutError
 
 import discord
 from discord.ext import tasks, vbu
@@ -205,14 +206,13 @@ class BongHandler(vbu.Cog):
                             url,
                             json=payload,
                             headers=headers,
-                            # timeout=5,
+                            timeout=3,
                         )
                     except requests.exceptions.ProxyError as pe:
-                        self.logger.debug(f"Proxy failed {proxies}; removing")
-                        try:
-                            self.HTTPS_PROXY_LIST.remove(proxies['https'])  # type: ignore
-                        except ValueError:
-                            pass
+                        self.logger.debug(f"Proxy failed {proxies}; retrying")
+                        continue
+                    except ConnectTimeoutError:
+                        self.logger.debug(f"Failed to send with proxy within 3 seconds {proxies}; retrying")
                         continue
                     message_payload = site.text
                     break
