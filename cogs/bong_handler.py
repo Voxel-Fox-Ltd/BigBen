@@ -111,6 +111,7 @@ class BongHandler(vbu.Cog):
             return  # Do nothing
 
         # Check SSL
+        self.logger.info("Getting HTTPS proxy list")
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
         proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=True) for i in data.strip().split("\n")]
@@ -119,11 +120,15 @@ class BongHandler(vbu.Cog):
 
         # Check HTTP
         params.pop("https", None)
+        self.logger.info("Getting HTTP proxy list")
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
         proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=False) for i in data.strip().split("\n")]
         proxy_check_result = await asyncio.gather(*proxy_check_tasks)
         self.PROXY_LIST = [i[0] for i in proxy_check_result if i]
+
+        # And done
+        self.logger.info("Checked all proxies")
 
     @tasks.loop(seconds=1)
     async def bing_bong(self):
