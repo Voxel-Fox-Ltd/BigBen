@@ -191,7 +191,7 @@ class BongHandler(vbu.Cog):
             message_payload: typing.Optional[str] = None
             try:
                 while True:
-                    if self.PROXY_LIST:
+                    if self.PROXY_LIST and self.HTTPS_PROXY_LIST:
                         proxies = {
                             # "http": random.choice(self.PROXY_LIST),
                             "https": random.choice(self.HTTPS_PROXY_LIST),

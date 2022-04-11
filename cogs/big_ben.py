@@ -17,7 +17,7 @@ class BigBen(vbu.Cog):
         """
 
         handler = self.bot.get_cog("BongHandler")
-        if not handler.PROXY_LIST:
+        if not (handler.PROXY_LIST and handler.HTTPS_PROXY_LIST):
             await handler.populate_proxy_list()
         self.bot.dispatch("bong", ctx.interaction.guild_id)
         return await ctx.send("Dispatched test bong.")
