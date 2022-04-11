@@ -37,6 +37,7 @@ class BongHandler(vbu.Cog):
         (31, 3, 2024): "Easter Bong",
     }  # (DD, MM, YYYY?): Output
     PROXY_LIST: typing.List[str] = []
+    HTTPS_PROXY_LIST: typing.List[str] = []
 
     def __init__(self, bot: vbu.Bot):
         super().__init__(bot)
@@ -73,6 +74,7 @@ class BongHandler(vbu.Cog):
             "pass": self.bot.config.get('didsoft', dict()).get('pass'),
             "pid": "http3000",
             "showcountry": "no",
+            "https": "yes",
         }
         headers = {
             "User-Agent": self.bot.user_agent,
@@ -81,8 +83,10 @@ class BongHandler(vbu.Cog):
             return  # Do nothing
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
-        if data == "Error: password is empty":
-            return
+        self.HTTPS_PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
+        params.pop("https", None)
+        async with self.bot.session.get(base, params=params, headers=headers) as r:
+            data = await r.text()
         self.PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
 
     @tasks.loop(seconds=1)
@@ -179,8 +183,10 @@ class BongHandler(vbu.Cog):
             # Send message
             # site: aiohttp.ClientResponse = self.bot.session.post(url, json=payload, headers=headers)
             if self.PROXY_LIST:
-                purl = random.choice(self.PROXY_LIST)
-                proxies = {"http": purl, "https": purl}
+                proxies = {
+                    "http": random.choice(self.PROXY_LIST),
+                    "https": random.choice(self.HTTPS_PROXY_LIST),
+                }
                 self.logger.debug(f"Sending bong message for {url} with {proxies}")
                 site: requests.Response = requests.post(
                     url,
