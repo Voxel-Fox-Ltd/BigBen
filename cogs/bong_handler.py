@@ -211,8 +211,8 @@ class BongHandler(vbu.Cog):
                     except requests.exceptions.ProxyError as pe:
                         self.logger.debug(f"Proxy failed {proxies}; retrying")
                         continue
-                    except ConnectTimeoutError:
-                        self.logger.debug(f"Failed to send with proxy within 3 seconds {proxies}; retrying")
+                    except Exception as e:
+                        self.logger.debug(f"Failed to send {e} {proxies}; retrying")
                         continue
                     message_payload = site.text
                     break
