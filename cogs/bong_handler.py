@@ -174,12 +174,19 @@ class BongHandler(vbu.Cog):
 
             # Send message
             # site: aiohttp.ClientResponse = self.bot.session.post(url, json=payload, headers=headers)
-            site: requests.Response = requests.post(
-                url,
-                json=payload,
-                headers=headers,
-                proxies={"http": random.choice(self.PROXY_LIST)}
-            )
+            if self.PROXY_LIST:
+                site: requests.Response = requests.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                    proxies={"http": random.choice(self.PROXY_LIST)}
+                )
+            else:
+                site: requests.Response = requests.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                )
             if site.ok:
                 message_payload = site.json()
                 # elif site.status in [400, 401, 403, 404]:

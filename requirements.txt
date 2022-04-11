@@ -1,3 +1,4 @@
 voxelbotutils
 novus
 matplotlib
+requests
