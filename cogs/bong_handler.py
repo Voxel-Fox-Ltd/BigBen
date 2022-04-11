@@ -71,18 +71,21 @@ class BongHandler(vbu.Cog):
         Test a proxy by pinging it against localhost.
         """
 
+        proxies = {"https" if https else "http": proxy}
+        if https and self.PROXY_LIST:
+            proxies["http"] = random.choice(self.PROXY_LIST)
         def wrapper():
             try:
                 site = requests.get(
                     "http://127.0.0.1:6969",
-                    proxies={"https" if https else "http": proxy},
+                    proxies=proxies,
                     timeout=timeout,
                 )
             except:
                 return False
             return True
         working = await self.bot.loop.run_in_executor(None, wrapper)
-        self.logger.info(f"Checked {'https' if https else 'http'} proxy {proxy}; {'working' if working else 'hecked'}")
+        self.logger.info(f"Checked {'https' if https else 'http'} proxy {proxies}; {'working' if working else 'hecked'}")
         if working:
             return (proxy, https,)
         return None
@@ -100,7 +103,6 @@ class BongHandler(vbu.Cog):
             "pass": self.bot.config.get('didsoft', dict()).get('pass'),
             "pid": "http3000",
             "showcountry": "no",
-            "https": "yes",
         }
         headers = {
             "User-Agent": self.bot.user_agent,
@@ -110,22 +112,22 @@ class BongHandler(vbu.Cog):
         if None in params.values():
             return  # Do nothing
 
+        # Check HTTP
+        self.logger.info("Getting HTTP proxy list")
+        async with self.bot.session.get(base, params=params, headers=headers) as r:
+            data = await r.text()
+        proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=False) for i in data.strip().split("\n")[:100]]
+        proxy_check_result = await asyncio.gather(*proxy_check_tasks)
+        self.PROXY_LIST = [i[0] for i in proxy_check_result if i]
+
         # Check SSL
+        params["https"] = "yes"
         self.logger.info("Getting HTTPS proxy list")
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
         proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=True) for i in data.strip().split("\n")]
         proxy_check_result = await asyncio.gather(*proxy_check_tasks)
         self.HTTPS_PROXY_LIST = [i[0] for i in proxy_check_result if i]
-
-        # Check HTTP
-        params.pop("https", None)
-        self.logger.info("Getting HTTP proxy list")
-        async with self.bot.session.get(base, params=params, headers=headers) as r:
-            data = await r.text()
-        proxy_check_tasks = [self.test_proxy(self.bot.session, i.strip(), https=False) for i in data.strip().split("\n")]
-        proxy_check_result = await asyncio.gather(*proxy_check_tasks)
-        self.PROXY_LIST = [i[0] for i in proxy_check_result if i]
 
         # And done
         self.logger.info("Checked all proxies")
