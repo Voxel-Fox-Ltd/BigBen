@@ -46,6 +46,7 @@ class BongHandler(vbu.Cog):
         # The last hour of bongs that was posted, used for checking if we should post a new one
         # `None` is valid as making sure the minute is 0 is also checked
 
+        self.populate_proxy_list.start()
         self.bing_bong.start()
         # The bong loop
 
@@ -62,8 +63,10 @@ class BongHandler(vbu.Cog):
         # A dict of message_id: username for the first people to click the bong button
 
     def cog_unload(self):
+        self.populate_proxy_list.cancel()
         self.bing_bong.cancel()
 
+    @tasks.loop(minutes=10)
     async def populate_proxy_list(self):
         """
         Populates the Didsoft Proxy list :)
