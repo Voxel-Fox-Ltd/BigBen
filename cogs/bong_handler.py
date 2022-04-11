@@ -269,23 +269,23 @@ class BongHandler(vbu.Cog):
 
             # See if they have a webhook
             if settings.get("bong_channel_webhook"):
-                if bong_guild_id is not None:
-                    # await asyncio.to_thread(
-                    #     self.send_guild_bong_message,
-                    #     text, now, guild_id, settings, guilds_to_delete,
-                    # )
-                    try:
-                        self.send_guild_bong_message(text, now, guild_id, settings, guilds_to_delete)
-                    except Exception as e:
-                        self.logger.error("Angy", exc_info=e)
-                else:
-                    tasks_to_gather.append(asyncio.to_thread(
-                        self.send_guild_bong_message,
-                        text, now, guild_id, settings, guilds_to_delete,
-                    ))
+                # if bong_guild_id is not None:
+                #     await asyncio.to_thread(
+                #         self.send_guild_bong_message,
+                #         text, now, guild_id, settings, guilds_to_delete,
+                #     )
+                #     try:
+                #         self.send_guild_bong_message(text, now, guild_id, settings, guilds_to_delete)
+                #     except Exception as e:
+                #         self.logger.error("Angy", exc_info=e)
+                # else:
+                tasks_to_gather.append(asyncio.to_thread(
+                    self.send_guild_bong_message,
+                    text, now, guild_id, settings, guilds_to_delete,
+                ))
 
         # Gather all of our data, send all the messages, etc
-        await asyncio.wait_for(asyncio.gather(*tasks_to_gather), timeout=5)
+        await asyncio.wait_for(asyncio.gather(*tasks_to_gather), timeout=60)
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
