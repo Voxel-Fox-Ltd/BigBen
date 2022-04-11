@@ -70,7 +70,7 @@ class BongHandler(vbu.Cog):
         base = "http://list.didsoft.com/get"
         params = {
             "email": self.bot.config.get('didsoft', dict()).get('email'),
-            "email": self.bot.config.get('didsoft', dict()).get('pass'),
+            "pass": self.bot.config.get('didsoft', dict()).get('pass'),
         }
         headers = {
             "User-Agent": self.bot.user_agent,
@@ -79,6 +79,8 @@ class BongHandler(vbu.Cog):
             return  # Do nothing
         async with self.bot.session.get(base, params=params, headers=headers) as r:
             data = await r.text()
+        if data == "Error: password is empty":
+            return
         self.PROXY_LIST = [i.strip() for i in data.strip().split("\n")]
 
     @tasks.loop(seconds=1)
