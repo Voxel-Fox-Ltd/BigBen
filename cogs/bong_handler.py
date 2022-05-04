@@ -413,6 +413,6 @@ class BongHandler(vbu.Cog):
 
 
 def setup(bot: vbu.Bot):
-    bot.startup_method = bot.loop.create_task(bot.startup())
+    # bot.startup_method = bot.loop.create_task(bot.startup())
     x = BongHandler(bot)
     bot.add_cog(x)
