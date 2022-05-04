@@ -5,7 +5,6 @@ from datetime import datetime as dt
 import re
 import collections
 from typing import Dict, Union, Tuple, Optional
-import json
 import typing
 
 import discord
@@ -16,6 +15,10 @@ if typing.TYPE_CHECKING:
 
 
 class BongHandler(vbu.Cog):
+
+    ALLOWED_GUILD_IDS = [
+        208895639164026880,
+    ]
 
     EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
     DEFAULT_BONG_TEXT = "Bong"
@@ -38,7 +41,7 @@ class BongHandler(vbu.Cog):
 
     def __init__(self, bot: vbu.Bot):
         super().__init__(bot)
-        self.last_posted_hour: int = None
+        self.last_posted_hour: Optional[int] = None
         # The last hour of bongs that was posted, used for checking if we should post a new one
         # `None` is valid as making sure the minute is 0 is also checked
 
@@ -158,14 +161,6 @@ class BongHandler(vbu.Cog):
                 message_payload = await site.text()
                 self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
                 return
-            # elif site.status in [429]:
-            #     message_payload = await site.text()
-            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id}) - {message_payload}")
-            #     return
-            # else:
-            #     message_payload = await site.text()
-            #     self.logger.info(f"Send failed - {site.status} (G{guild_id}/C{channel_id})")
-            #     return
 
             # Cache message
             self.current_bong_messages.add(int(message_payload['id']))
@@ -206,6 +201,10 @@ class BongHandler(vbu.Cog):
             if bong_guild_id is not None and bong_guild_id != guild_id:
                 continue
 
+            # Only allow whitelisted guilds
+            if guild_id not in self.ALLOWED_GUILD_IDS:
+                continue
+
             # See if they have a webhook
             if settings.get("bong_channel_webhook"):
                 tasks_to_gather.append(self.send_guild_bong_message(
@@ -217,15 +216,6 @@ class BongHandler(vbu.Cog):
 
         # Sick we're done
         self.logger.info("Done sending bong messages")
-
-        # Delete channels that we should no longer care about
-        # async with self.bot.database() as db:
-        #     await db(
-        #         """UPDATE guild_settings SET bong_channel_id=NULL WHERE guild_id=ANY($1::BIGINT[])""",
-        #         list(guilds_to_delete),
-        #     )
-        # for guild_id in guilds_to_delete:
-        #     self.bot.guild_settings[guild_id]['bong_channel_id'] = None
 
     async def update_bong_message_components(self, payload: discord.Interaction):
         """
