@@ -1,5 +1,5 @@
-import voxelbotutils as vbu
 import discord
+from discord.ext import vbu
 
 
 async def bong_channel_storage_whatever(ctx, data):
