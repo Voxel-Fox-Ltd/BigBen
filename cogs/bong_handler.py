@@ -18,6 +18,7 @@ class BongHandler(vbu.Cog):
 
     ALLOWED_GUILD_IDS = [
         208895639164026880,
+        854141976282398721,
     ]
 
     EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
