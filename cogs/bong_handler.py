@@ -22,16 +22,18 @@ class BongHandler(vbu.Cog):
     ]
 
     EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
-    DEFAULT_BONG_TEXT = "Bong"
+    DEFAULT_BONG_TEXT = "🕰️ Bong"
     BONG_TEXT: Dict[Union[Tuple[int, int], Tuple[int, int, int]], str] = {
         (1, 1): "{0.year} Bong",
         (14, 2): "Valentine's Bong",
+	    (8, 7): "🐱 Blessed Catdotjs Birthday Bong 🎉",
         (1, 4): "Bing",
         (22, 4): "Earth Bong",
         (2, 7): "Midway Bong",
         (6, 9): "Birthday Bong",
         (31, 10): "Spooky Bong",
         (25, 12): "Christmas Bong",
+	    (12,2): "⛏️ MOLES MOLES MOLES bong",
 
         (12, 4, 2020): "Easter Bong",
         (4, 4, 2021): "Easter Bong",
@@ -236,17 +238,24 @@ class BongHandler(vbu.Cog):
             return
         components = payload.message.components
 
+        colours = [discord.ButtonStyle.primary, discord.ButtonStyle.success, discord.ButtonStyle.danger]
+        medals = ["\N{FIRST PLACE MEDAL}","\N{SECOND PLACE MEDAL}","\N{THIRD PLACE MEDAL}"]
+        amount_of_components = len(components.components[0].components)
+
         # Add the "first clicked by" button
-        if len(components.components[0].components) == 1:
+        if amount_of_components <= 3 and payload.user.id not in self.bong_button_clicks[payload.message.id]:
             username = str(payload.user)
             components.components[0].add_component(
                 discord.ui.Button(
-                    label=username,
-                    custom_id="BONG MESSAGE FIRST CLICKED",
+                    label=f"{username}",
+                    custom_id=f"BONG MESSAGE CLICKED {amount_of_components}",
+                    emoji=medals[amount_of_components-1],
                     disabled=True,
-                    style=discord.ButtonStyle.secondary
+                    style=colours[amount_of_components-1],
                 )
             )
+
+        self.bong_button_clicks[payload.message.id].add(payload.user.id)  # Add this user to a list of clickers
 
         # Update the bong button
         bong_button = components.get_component("BONG MESSAGE BUTTON")
@@ -304,7 +313,6 @@ class BongHandler(vbu.Cog):
             return
 
         # Say that the user has clicked the button
-        self.bong_button_clicks[payload.message.id].add(payload.user.id)  # Add this user to a list of clickers
         self.first_button_click.setdefault(payload.message.id, str(payload.user))  # Say this button was clicked first by user
 
         # Grab a lock so we can edit the message
