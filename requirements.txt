@@ -1,2 +1,3 @@
-voxelbotutils>=0.5.10,<0.6
+voxelbotutils
+novus
 matplotlib
