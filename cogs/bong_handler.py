@@ -22,23 +22,23 @@ class BongHandler(vbu.Cog):
     ]
 
     EMOJI_REGEX = re.compile(r"<a?:(?P<name>.+?):(?P<id>\d+?)>")
-    DEFAULT_BONG_TEXT = "🕰️ Bong"
+    DEFAULT_BONG_TEXT = "🔔 Bong 🔔"
     BONG_TEXT: Dict[Union[Tuple[int, int], Tuple[int, int, int]], str] = {
-        (1, 1): "{0.year} Bong",
-        (14, 2): "Valentine's Bong",
+        (1, 1): "{0.year} Bong 🎉",
+        (14, 2): "♥🧡💛 Valentine's Bong 💚💙💜",
 	    (8, 7): "🐱 Blessed Catdotjs Birthday Bong 🎉",
-        (1, 4): "Bing",
-        (22, 4): "Earth Bong",
+        (1, 4): "\N{FACE WITH ONE EYEBROW RAISED} Bing",
+        (22, 4): "🌍 Earth Bong 🌎",
         (2, 7): "Midway Bong",
-        (6, 9): "Birthday Bong",
-        (31, 10): "Spooky Bong",
-        (25, 12): "Christmas Bong",
-	    (12,2): "⛏️ MOLES MOLES MOLES bong",
+        (6, 9): "🥳 Birthday Bong 🎂",
+        (31, 10): "👻 Spooky Bong 👻",
+        (25, 12): "🎅 Christmas Bong 🌲",
+	    (12,2): "⛏️ MOLES MOLES MOLES Bong ☠",
 
         (12, 4, 2020): "Easter Bong",
         (4, 4, 2021): "Easter Bong",
         (17, 4, 2022): "Easter Bong",
-        (9, 4, 2023): "Easter Bong",
+        (9, 4, 2023): "🐇 Easter Bong 🥚",
         (31, 3, 2024): "Easter Bong",
     }  # (DD, MM, YYYY?): Output
 
@@ -133,9 +133,17 @@ class BongHandler(vbu.Cog):
             # Set up our emoji to be added
             emoji = settings['bong_emoji']
 
-            # See if we should get some other text
+            # See if we should get some other text - Make an embed that contains a fun fact :) (by catdotjs)
+            site = await self.bot.session.get("https://uselessfacts.jsph.pl/random.json?language=en")
+            fun_fact = await site.json()
             override_text = settings.get('override_text', {}).get(f"{now.month}-{now.day}")
-            payload['content'] = override_text or text
+            payload['embeds'] = discord.ui.MessageComponents(
+                    discord.Embed(
+                        title=(override_text or text),
+                        colour=discord.Colour(random.randint(8388608,16777214)),
+                        description=f"__**fun fact:**__ {fun_fact['text']}"
+                    )
+                ).to_dict()
 
             # Set up the components to be added
             if emoji:
