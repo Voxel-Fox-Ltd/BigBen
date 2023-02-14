@@ -6,6 +6,7 @@ import re
 import collections
 from typing import Dict, Union, Tuple, Optional
 import typing
+import random
 
 import discord
 from discord.ext import tasks, vbu
