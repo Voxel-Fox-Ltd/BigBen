@@ -29,7 +29,7 @@ class BongHandler(vbu.Cog):
 	    (8, 7): "🐱 Blessed Catdotjs Birthday Bong 🎉",
         (1, 4): "\N{FACE WITH ONE EYEBROW RAISED} Bing",
         (22, 4): "🌍 Earth Bong 🌎",
-        (2, 7): "Midway Bong",
+        (2, 7): "👀 Midway of The Year Bong 📅",
         (6, 9): "🥳 Birthday Bong 🎂",
         (31, 10): "👻 Spooky Bong 👻",
         (25, 12): "🎅 Christmas Bong 🌲",
@@ -39,7 +39,7 @@ class BongHandler(vbu.Cog):
         (4, 4, 2021): "Easter Bong",
         (17, 4, 2022): "Easter Bong",
         (9, 4, 2023): "🐇 Easter Bong 🥚",
-        (31, 3, 2024): "Easter Bong",
+        (31, 3, 2024): "🐇 Easter Bong 🥚",
     }  # (DD, MM, YYYY?): Output
 
     def __init__(self, bot: vbu.Bot):
