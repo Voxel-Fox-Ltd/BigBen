@@ -142,8 +142,11 @@ class BongHandler(vbu.Cog):
                     discord.Embed(
                         title=(override_text or text),
                         colour=discord.Colour(random.randint(8388608,16777214)),
-                        description=f"__**fun fact:**__ {fun_fact['text']}"
-                    )
+                        description=f"__**fun fact:**__ {fun_fact['text']}",
+                    ).set_footer(
+                        text="This bot is maintained by catdotjs#6969. If bot stops working, please let them know.",
+                        icon_url="https://static.vecteezy.com/system/resources/previews/017/172/383/original/warning-message-concept-represented-by-exclamation-mark-icon-exclamation-symbol-in-circle-png.png"
+                        )
                 ).to_dict()
 
             # Set up the components to be added
